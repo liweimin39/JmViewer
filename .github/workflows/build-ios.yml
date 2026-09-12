@@ -19,62 +19,43 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install CocoaPods
-        run: |
-          sudo gem install cocoapods
-          pod --version
-
       - name: Install dependencies
         run: npm ci
 
       - name: Build Web
         run: npm run build
 
-      # ★ 带诊断的 iOS 平台检查
+      # ★ 只在 ios/ 完全不存在时才生成
       - name: Ensure iOS platform exists
         run: |
-          echo "=== 检查当前 ios 目录 ==="
-          if [ -d "ios" ]; then
-            ls -la ios/ || true
-            if [ -d "ios/App" ]; then
-              ls -la ios/App/ || true
-            else
-              echo "ios/App 目录不存在"
-            fi
-          else
-            echo "ios 目录不存在"
-          fi
-
-          echo "=== 检查 capacitor.config ==="
-          ls capacitor.config.* 2>/dev/null || echo "找不到 capacitor.config"
-
-          echo "=== 检查 @capacitor/ios 是否已安装 ==="
-          npm ls @capacitor/ios || echo "@capacitor/ios 未在 package.json 中"
-
-          echo "=== 判断是否需要重建 ==="
-          if [ ! -f "ios/App/Podfile" ]; then
-            echo ">>> Podfile 缺失，重新生成 iOS 平台"
+          if [ ! -d "ios/App/App.xcodeproj" ]; then
+            echo ">>> iOS 工程缺失，重新生成"
             rm -rf ios
             npx cap add ios
           else
-            echo ">>> Podfile 已存在，跳过生成"
+            echo ">>> 检测到 iOS 工程已存在，跳过生成"
           fi
-
-          echo "=== 生成后的 ios/App 目录 ==="
-          ls -la ios/App/ || echo "重建后仍然没有 ios/App 目录"
+          ls -la ios/App/
 
       - name: Sync Capacitor
         run: npx cap sync ios
 
-      - name: Pod install
-        working-directory: ios/App
-        run: pod install
-
+      # ★ 核心改动：根据模式选择构建方式
       - name: Build iOS (no codesign)
         working-directory: ios/App
         run: |
+          if [ -f "Podfile" ]; then
+            echo ">>> CocoaPods 模式"
+            sudo gem install cocoapods
+            pod install
+            WORKSPACE_FLAG="-workspace App.xcworkspace"
+          else
+            echo ">>> SPM 模式（无 Podfile）"
+            WORKSPACE_FLAG="-project App.xcodeproj"
+          fi
+
           xcodebuild \
-            -workspace App.xcworkspace \
+            $WORKSPACE_FLAG \
             -scheme App \
             -configuration Release \
             -sdk iphoneos \
