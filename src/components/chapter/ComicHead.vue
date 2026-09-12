@@ -20,12 +20,12 @@ const authorText = computed(() => (props.album.author || []).join(' & '))
       <h2 class="author">{{ authorText }}</h2>
       <div class="detailed-info">
         <div class="tags">
+          <!-- ★ 去掉 target="_blank"，改用 RouterLink -->
           <RouterLink
             v-for="t in album.tags"
             :key="t"
             class="tag"
             :to="`/search?sq=${encodeURIComponent(t)}`"
-            target="_blank"
           >{{ t }}</RouterLink>
         </div>
         <div class="latest"></div>

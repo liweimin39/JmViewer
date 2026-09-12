@@ -7,6 +7,7 @@ defineProps({ list: { type: Array, default: () => [] } })
   <div class="recommended-comics">
     <h1 class="rc-title">更多漫画</h1>
     <div class="rc-cr">
+      <!-- RouterLink 本来就没有 target="_blank"，这里无需改动，仅确认 -->
       <RouterLink
         v-for="data in list"
         :key="data.id"
