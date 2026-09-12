@@ -1,0 +1,66 @@
+# .github/workflows/build-ios.yml
+name: Build iOS IPA (Unsigned)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install CocoaPods
+        run: |
+          sudo gem install cocoapods
+          pod --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Web
+        run: npm run build
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      - name: Pod install
+        working-directory: ios/App
+        run: pod install
+
+      - name: Build iOS (no codesign)
+        working-directory: ios/App
+        run: |
+          xcodebuild \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -R ios/App/build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -r JmViewer-unsigned.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmviewer-ios-ipa-unsigned
+          path: JmViewer-unsigned.ipa
+          retention-days: 30
