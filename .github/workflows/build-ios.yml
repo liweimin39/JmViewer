@@ -30,10 +30,12 @@ jobs:
       - name: Build Web
         run: npm run build
 
-      # 如果 ios/ 目录不存在，自动生成一次（首次构建用）
+      # ★ 关键修复：判断 Podfile 是否存在，不存在就整个重建 ios/ 目录
       - name: Ensure iOS platform exists
         run: |
-          if [ ! -d "ios/App" ]; then
+          if [ ! -f "ios/App/Podfile" ]; then
+            echo "Podfile missing, regenerating iOS platform..."
+            rm -rf ios
             npm install @capacitor/ios
             npx cap add ios
           fi
