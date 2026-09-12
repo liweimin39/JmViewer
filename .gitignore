@@ -38,14 +38,16 @@ __screenshots__/
 # Vite
 *.timestamp-*-*.mjs
 
-# Capacitor
+# Capacitor Android
 android/.gradle/
 android/app/build/
 android/build/
 android/local.properties
 android/.idea/
 android/app/release/
+android/app/release.keystore
 
+# Capacitor iOS
 ios/App/Pods/
 ios/App/Podfile.lock
 ios/App/build/
@@ -54,6 +56,8 @@ ios/App/*.xcworkspace/xcuserdata/
 ios/App/*.xcodeproj/xcuserdata/
 ios/App/App/public/
 
-
-release.keystore
-release.keystore.base64
+# Keystore（千万不要提交）
+*.keystore
+*.keystore.base64
+*.p12
+*.mobileprovision

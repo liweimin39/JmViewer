@@ -1,4 +1,3 @@
-# .github/workflows/build-android.yml
 name: Build Android APK
 
 on:
@@ -17,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Setup Java
@@ -38,7 +37,7 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      # ---- 恢复 keystore ----
+      # ---- 恢复 keystore（如果没有配 release 签名，删掉这一步和下面的签名参数）----
       - name: Decode Keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
