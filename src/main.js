@@ -1,3 +1,7 @@
+// ★ 第一行！必须在所有 import 之前
+import 'core-js/actual'
+import 'core-js/actual/promise/with-resolvers' // 保险：显式补
+
 import './styles/basic.css'
 
 import { createApp } from 'vue'
@@ -5,7 +9,6 @@ import App from './App.vue'
 import router from './router'
 import { setting } from '@/components/general/Setting.js'
 import { jmApi } from '@/api/JmcomicApi.js'
-
 
 async function bootstrap() {
   setting.init()
