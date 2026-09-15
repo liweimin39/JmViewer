@@ -25,8 +25,8 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      # ★ 删掉了 android-actions/setup-android@v3
+      #   ubuntu-latest runner 已预装 Android SDK，无需重新安装
 
       - name: Install dependencies
         run: npm ci
@@ -37,7 +37,7 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      # ---- 恢复 keystore（如果没有配 release 签名，删掉这一步和下面的签名参数）----
+      # ---- 恢复 keystore ----
       - name: Decode Keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
