@@ -8,60 +8,6 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>JmViewer</title>
-
-    <!-- ★★★ 临时调试代码：开始 ★★★ -->
-    <script>
-      ;(function () {
-        function showError(title, msg) {
-          var el = document.getElementById('__debug_panel')
-          if (!el) {
-            el = document.createElement('pre')
-            el.id = '__debug_panel'
-            el.style.cssText =
-              'position:fixed;top:0;left:0;right:0;bottom:0;background:#111;color:#0f0;font-size:12px;padding:12px;overflow:auto;z-index:99999;white-space:pre-wrap;word-break:break-all;margin:0;'
-            ;(document.body || document.documentElement).appendChild(el)
-          }
-          el.textContent += '[' + title + ']\n' + msg + '\n\n'
-        }
-
-        window.addEventListener('error', function (e) {
-          showError(
-            'ERROR',
-            (e.message || '') +
-              '\n' +
-              (e.filename || '') +
-              ':' +
-              (e.lineno || '') +
-              '\n' +
-              (e.error && e.error.stack ? e.error.stack : ''),
-          )
-        })
-
-        window.addEventListener('unhandledrejection', function (e) {
-          var r = e.reason
-          showError('REJECTION', r && r.stack ? r.stack : String(r))
-        })
-
-        // 10 秒后如果 #app 还是空的，就打印环境信息
-        setTimeout(function () {
-          var app = document.getElementById('app')
-          if (app && app.children.length === 0) {
-            var info = [
-              'UA: ' + navigator.userAgent,
-              '平台: ' + (navigator.platform || 'unknown'),
-              'Object.hasOwn: ' + typeof Object.hasOwn,
-              'Array.prototype.at: ' + typeof Array.prototype.at,
-              'structuredClone: ' + typeof structuredClone,
-              'Promise.withResolvers: ' + typeof Promise.withResolvers,
-              'CSS.supports: ' + (typeof CSS !== 'undefined' && CSS.supports ? 'yes' : 'no'),
-              'location: ' + location.href,
-            ].join('\n')
-            showError('APP 未挂载', info)
-          }
-        }, 10000)
-      })()
-    </script>
-    <!-- ★★★ 临时调试代码：结束 ★★★ -->
   </head>
   <body>
     <div id="app"></div>
