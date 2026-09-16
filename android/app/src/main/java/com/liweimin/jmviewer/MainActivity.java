@@ -1,4 +1,4 @@
-package com.yourname.jmviewer;
+package com.liweimin.jmviewer;
 
 import com.getcapacitor.BridgeActivity;
 
