@@ -1,231 +1,238 @@
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 html,
 body {
-    -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  overscroll-behavior-y: none;
 }
 
 .root {
-    width: 100%;
-    height: auto;
-    padding-top: calc(50px + env(safe-area-inset-top, 0px));
+  width: 100%;
+  height: auto;
+  padding-top: calc(50px + env(safe-area-inset-top, 0px));
 }
 
 /* ============ 顶部栏 ============ */
 .nav {
-    z-index: 99;
-    position: fixed;
-    top: 0;
-    left: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    height: calc(50px + env(safe-area-inset-top, 0px));
-    padding: env(safe-area-inset-top, 0px) 12px 0;
-    background: #f8bbd0;
+  z-index: 99;
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: calc(50px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 12px 0;
+  background: #f8bbd0;
 }
 
 .page-list-btn {
-    display: flex;
-    flex-direction: column;
-    width: 30px;
-    height: 30px;
-    flex-shrink: 0;
-    border-radius: 5px;
-    border: 1px solid #fff;
-    padding: 4px 2px;
+  display: flex;
+  flex-direction: column;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  border: 1px solid #fff;
+  padding: 4px 2px;
 }
 
 .btn-inner {
-    width: 80%;
-    height: 2px;
-    margin: auto;
-    background-color: #fff;
-    border-radius: 1px;
+  width: 80%;
+  height: 2px;
+  margin: auto;
+  background-color: #fff;
+  border-radius: 1px;
 }
 
 .logo {
-    font-size: 18px;
-    font-weight: 700;
-    color: #aa4d4d;
-    margin-left: 10px;
-    flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #aa4d4d;
+  margin-left: 10px;
+  flex-shrink: 0;
 }
 
 .search {
-    flex: 1;
-    height: 34px;
-    margin-left: 12px;
-    max-width: 220px;
+  flex: 1;
+  height: 34px;
+  margin-left: 12px;
+  max-width: 220px;
 }
 
 .search form {
-    width: 100%;
-    height: 100%;
+  width: 100%;
+  height: 100%;
 }
 
 .search input {
-    display: block;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(255, 255, 255, 0.5);
-    border-radius: 17px;
-    border: none;
-    font-size: 15px;
-    padding: 0 15px;
-    outline: none;
-    color: #503535;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 17px;
+  border: none;
+  font-size: 15px;
+  padding: 0 15px;
+  outline: none;
+  color: #503535;
 }
 
 .search input::placeholder {
-    color: #ffb7b7;
+  color: #ffb7b7;
 }
 
 /* ============ 侧边抽屉 ============ */
 .mob-nav {
-    display: none;
-    z-index: 999;
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    transition: opacity 0.3s;
-    opacity: 0;
+  display: none;
+  z-index: 999;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  transition: opacity 0.3s;
+  opacity: 0;
 }
 
 .mob-nav.show {
-    opacity: 1;
+  opacity: 1;
 }
 
 .show .mn-inner {
-    transform: translateX(0);
+  transform: translateX(0);
 }
 
 .mn-inner {
-    width: 250px;
-    height: 100%;
-    background-color: #fff8f8;
-    transform: translateX(-250px);
-    transition: transform 0.4s;
-    padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  width: 250px;
+  height: 100%;
+  background-color: #fff8f8;
+  transform: translateX(-250px);
+  transition: transform 0.4s;
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
 }
 
 .mn-items-cr {
-    width: 100%;
-    height: auto;
-    margin-top: 10px;
+  width: 100%;
+  height: auto;
+  margin-top: 10px;
 }
 
 .mn-item {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    height: 60px;
-    line-height: 60px;
-    color: #ffb7b7;
-    padding-left: 20px;
-    text-decoration: none;
-    font-size: 16px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 60px;
+  line-height: 60px;
+  color: #ffb7b7;
+  padding-left: 20px;
+  text-decoration: none;
+  font-size: 16px;
 }
 
 .mn-item.active {
-    background-color: #ffdce6;
-    color: #ff75a3;
+  background-color: #ffdce6;
+  color: #ff75a3;
 }
 
 /* ============ 图源切换按钮 ============ */
 .switch-server {
-    z-index: 99;
-    position: fixed;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    right: 20px;
-    bottom: calc(10% + env(safe-area-inset-bottom, 0px));
-    width: 70px;
-    height: 70px;
-    background-color: #ff6183;
-    color: #fff;
-    border-radius: 50%;
-    box-shadow: 1px 1px 10px 3px #794252;
-    cursor: pointer;
+  z-index: 99;
+  position: fixed;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  right: 20px;
+  bottom: calc(10% + env(safe-area-inset-bottom, 0px));
+  width: 70px;
+  height: 70px;
+  background-color: #ff6183;
+  color: #fff;
+  border-radius: 50%;
+  box-shadow: 1px 1px 10px 3px #794252;
+  cursor: pointer;
 }
 
-.switch-server:hover .sh-sr-cr {
+/* 点击切换（移动端 + 桌面端都可用） */
+.sh-sr-cr.open {
+  height: 300px;
+}
+
+/* 桌面端保留 hover 展开（鼠标悬停即开） */
+@media (hover: hover) and (pointer: fine) {
+  .switch-server:hover .sh-sr-cr {
     height: 300px;
+  }
 }
-
 .sh-sr-cr {
-    position: absolute;
-    right: 0;
-    bottom: 120%;
-    width: 150px;
-    height: 0;
-    background-color: #efefef;
-    border-radius: 5px;
-    overflow: hidden;
-    transition: height 0.5s;
+  position: absolute;
+  right: 0;
+  bottom: 120%;
+  width: 150px;
+  height: 0;
+  background-color: #efefef;
+  border-radius: 5px;
+  overflow: hidden;
+  transition: height 0.5s;
 }
 
 .server-name {
-    width: 100%;
-    height: 50px;
-    font-size: 20px;
-    text-align: center;
-    line-height: 50px;
-    background-color: #ff7fa7;
+  width: 100%;
+  height: 50px;
+  font-size: 20px;
+  text-align: center;
+  line-height: 50px;
+  background-color: #ff7fa7;
 }
 
 .server-name.active {
-    background-color: #ff6183;
+  background-color: #ff6183;
 }
 
 /* ============ 通用 loading ============ */
 .loading-icon {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 50px;
-    perspective: 200px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 50px;
+  perspective: 200px;
 }
 
 .loading-icon:before,
 .loading-icon:after {
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    content: "";
-    animation: loading-icon 0.5s infinite alternate;
-    background: rgb(228, 77, 147);
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  content: '';
+  animation: loading-icon 0.5s infinite alternate;
+  background: rgb(228, 77, 147);
 }
 
 .loading-icon:before {
-    left: 0;
+  left: 0;
 }
 
 .loading-icon:after {
-    right: 0;
-    animation-delay: 0.15s;
+  right: 0;
+  animation-delay: 0.15s;
 }
 
 @keyframes loading-icon {
-    0% {
-        transform: scale(1) translateY(0) rotateX(0);
-        box-shadow: 0 0 #ff5e9c;
-    }
-    to {
-        transform: scale(1.2) translateY(-25px) rotateX(45deg);
-        background: #d83875;
-        box-shadow: 0 25px 40px #fc5e7e;
-    }
+  0% {
+    transform: scale(1) translateY(0) rotateX(0);
+    box-shadow: 0 0 #ff5e9c;
+  }
+  to {
+    transform: scale(1.2) translateY(-25px) rotateX(45deg);
+    background: #d83875;
+    box-shadow: 0 25px 40px #fc5e7e;
+  }
 }

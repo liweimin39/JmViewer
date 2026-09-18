@@ -2,6 +2,9 @@
 import { ref, reactive } from 'vue'
 import { userApi } from '@/api/UserApi.js'
 import { useUser } from '@/composables/useUser.js'
+import LocalAuthForm from './LocalAuthForm.vue'
+
+const showLocalAuth = ref(false)
 
 const emit = defineEmits(['logged-in'])
 const { setUser } = useUser()
@@ -91,23 +94,29 @@ async function handleForgot() {
 </script>
 
 <template>
-  <div class="auth-container">
+  <LocalAuthForm
+    v-if="showLocalAuth"
+    @created="$emit('logged-in')"
+    @cancel="showLocalAuth = false"
+  />
+
+  <div v-else class="auth-container">
     <div class="auth-tabs">
-      <span
-        class="auth-tab"
-        :class="{ active: activeTab === 'login' }"
-        @click="activeTab = 'login'"
-      >登录</span>
+      <span class="auth-tab" :class="{ active: activeTab === 'login' }" @click="activeTab = 'login'"
+        >登录</span
+      >
       <span
         class="auth-tab"
         :class="{ active: activeTab === 'register' }"
         @click="activeTab = 'register'"
-      >注册</span>
+        >注册</span
+      >
       <span
         class="auth-tab"
         :class="{ active: activeTab === 'forgot' }"
         @click="activeTab = 'forgot'"
-      >忘记密码</span>
+        >忘记密码</span
+      >
     </div>
 
     <!-- 登录 -->
@@ -121,8 +130,13 @@ async function handleForgot() {
         @keyup.enter="handleLogin"
       />
       <button :disabled="loginState.loading" @click="handleLogin">
-        <span class="btn-text" :style="{ display: loginState.loading ? 'none' : 'inline' }">登录</span>
-        <span class="btn-loader" :style="{ display: loginState.loading ? 'inline-block' : 'none' }"></span>
+        <span class="btn-text" :style="{ display: loginState.loading ? 'none' : 'inline' }"
+          >登录</span
+        >
+        <span
+          class="btn-loader"
+          :style="{ display: loginState.loading ? 'inline-block' : 'none' }"
+        ></span>
       </button>
       <div class="msg" :style="{ color: loginState.color }">{{ loginState.msg }}</div>
     </div>
@@ -140,8 +154,13 @@ async function handleForgot() {
         <option value="Female">女</option>
       </select>
       <button :disabled="regState.loading" @click="handleRegister">
-        <span class="btn-text" :style="{ display: regState.loading ? 'none' : 'inline' }">注册</span>
-        <span class="btn-loader" :style="{ display: regState.loading ? 'inline-block' : 'none' }"></span>
+        <span class="btn-text" :style="{ display: regState.loading ? 'none' : 'inline' }"
+          >注册</span
+        >
+        <span
+          class="btn-loader"
+          :style="{ display: regState.loading ? 'inline-block' : 'none' }"
+        ></span>
       </button>
       <div class="msg" :style="{ color: regState.color }">{{ regState.msg }}</div>
     </div>
@@ -156,10 +175,23 @@ async function handleForgot() {
         @keyup.enter="handleForgot"
       />
       <button :disabled="forgotState.loading" @click="handleForgot">
-        <span class="btn-text" :style="{ display: forgotState.loading ? 'none' : 'inline' }">发送重置邮件</span>
-        <span class="btn-loader" :style="{ display: forgotState.loading ? 'inline-block' : 'none' }"></span>
+        <span class="btn-text" :style="{ display: forgotState.loading ? 'none' : 'inline' }"
+          >发送重置邮件</span
+        >
+        <span
+          class="btn-loader"
+          :style="{ display: forgotState.loading ? 'inline-block' : 'none' }"
+        ></span>
       </button>
       <div class="msg" :style="{ color: forgotState.color }">{{ forgotState.msg }}</div>
+    </div>
+
+    <!-- ★ 挪到三个表单之外，常驻显示 -->
+    <div class="local-entry">
+      <span class="local-entry-divider">或</span>
+      <button class="local-entry-btn" @click="showLocalAuth = true">
+        使用本地账号（离线使用）
+      </button>
     </div>
   </div>
 </template>

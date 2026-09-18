@@ -8,6 +8,8 @@ import CommentList from '@/components/chapter/CommentList.vue'
 import ChapterList from '@/components/chapter/ChapterList.vue'
 import RecommendedComics from '@/components/chapter/RecommendedComics.vue'
 import ComicContent from '@/components/chapter/ComicContent.vue'
+import { useLocalUser } from '@/composables/useLocalUser.js'
+import { localDB } from '@/utils/localDB.js'
 import '@/styles/chapter.css'
 
 const route = useRoute()
@@ -16,6 +18,8 @@ const album = ref(null)
 const chapter = ref(null)
 const loading = ref(true)
 const errorMsg = ref('')
+
+const { localUser } = useLocalUser()
 
 const comicId = computed(() => String(route.params.id))
 
@@ -41,6 +45,21 @@ async function loadAll() {
     ])
     album.value = a
     chapter.value = c
+
+    // ★ 加载成功后记录历史（只在本地账号下）
+    if (localUser.value && a && c) {
+      try {
+        await localDB.addHistory({
+          comicId: a.id,
+          name: a.name,
+          author: a.author,
+          chapterId: c.id,
+          chapterName: c.name || `第${c.id}章`,
+        })
+      } catch (e) {
+        console.warn('记录历史失败:', e)
+      }
+    }
   } catch (e) {
     console.error(e)
     errorMsg.value = e.message || '加载失败'

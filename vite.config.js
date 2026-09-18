@@ -19,4 +19,10 @@ export default defineConfig({
     // 关掉 modulepreload polyfill，iOS WKWebView 有已知问题
     modulePreload: { polyfill: false },
   },
+
+  server: {
+    host: true,
+    port: 5173,
+    open: false,
+  },
 })
