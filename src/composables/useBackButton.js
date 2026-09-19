@@ -3,23 +3,15 @@ import { useRouter, useRoute } from 'vue-router'
 import { App as CapApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 
-/**
- * 全局返回键处理
- * 优先级：
- *   1. 抽屉打开 → 关抽屉
- *   2. 有历史记录 → 路由返回
- *   3. 在首页 → 双击退出
- */
 export function useBackButton() {
   const router = useRouter()
   const route = useRoute()
 
   let handler = null
   let lastBackTime = 0
-  const DOUBLE_PRESS_DELAY = 2000 // 2 秒内再按一次才退出
+  const DOUBLE_PRESS_DELAY = 2000
 
   function showExitToast() {
-    // 复用已有的 toast 样式，动态创建一个
     let el = document.getElementById('__back_exit_toast')
     if (!el) {
       el = document.createElement('div')
@@ -56,7 +48,6 @@ export function useBackButton() {
     const mobNav = document.querySelector('.mob-nav.show')
     if (mobNav) {
       mobNav.classList.remove('show')
-      // 兼容 NavBar 里的过渡逻辑：400ms 后隐藏
       setTimeout(() => {
         const el = document.querySelector('.mob-nav')
         if (el && !el.classList.contains('show')) {
@@ -66,17 +57,15 @@ export function useBackButton() {
       return
     }
 
-    // 2. 有历史 → 返回上一页
-    const history = window.history
-    if (history.state && history.state.position > 0) {
+    // 2. ★ 核心：有历史记录 → 应用内后退一格
+    if (window.history.state && window.history.state.position > 0) {
       router.back()
       return
     }
 
-    // 3. 在首页或其他"根"路由 → 双击退出
+    // 3. 已经在根页面 → 双击退出（不是单击就退）
     const rootPaths = ['/', '/latest', '/categories', '/search', '/setting', '/user']
-    const isRoot = rootPaths.includes(route.path)
-    if (isRoot) {
+    if (rootPaths.includes(route.path)) {
       const now = Date.now()
       if (now - lastBackTime < DOUBLE_PRESS_DELAY) {
         CapApp.exitApp()
@@ -85,14 +74,13 @@ export function useBackButton() {
         showExitToast()
       }
     } else {
-      // 非 root 页（比如 chapter），若无历史就回到首页
+      // 非根页面但无历史 → 回首页
       router.push('/')
     }
   }
 
   onMounted(() => {
     if (!Capacitor.isNativePlatform()) return
-    // 只在 Android 上启用（iOS 没有物理返回键）
     if (Capacitor.getPlatform() !== 'android') return
 
     CapApp.addListener('backButton', onBackButton).then((h) => {
