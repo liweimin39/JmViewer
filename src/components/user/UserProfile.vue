@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { jmApi } from '@/api/JmcomicApi.js'
 import { userApi } from '@/api/UserApi.js'
 import { useUser } from '@/composables/useUser.js'
@@ -11,17 +11,28 @@ const emit = defineEmits(['logged-out'])
 
 const { clearUser, updateUserInfo } = useUser()
 
-const currentTab = ref('favorites')   // favorites | tracking | notifications
-const loading = ref(false)
+const currentTab = ref('favorites') // favorites | tracking | notifications
+
+// ---------- 通用列表状态 ----------
+const loading = ref(false) // 首次加载
+const loadingMore = ref(false) // 加载下一页
 const errorMsg = ref('')
 const comics = ref([])
+const currentPage = ref(1)
+const totalCount = ref(0)
+const hasMore = ref(false)
+const PAGE_SIZE = 80 // 兜底每页数量
 
-// 通知相关的状态（传给子组件）
+// 通知 tab 的状态
 const notifType = ref('all')
-const notifPage = ref(1)
 const notifList = ref([])
 const notifTotal = ref(0)
 const notifUnread = ref(0)
+const notifHasMore = ref(false)
+
+// 哨兵元素，用于无限滚动
+const sentinelRef = ref(null)
+let observer = null
 
 // 登出请求的 AbortController
 let logoutController = null
@@ -34,84 +45,213 @@ const avatarUrl = computed(() => {
 
 const favoriteCount = computed(() => Number(props.userInfo.album_favorites) || 0)
 
+// ---------- 重置列表状态 ----------
+function resetList() {
+  comics.value = []
+  currentPage.value = 1
+  totalCount.value = 0
+  hasMore.value = false
+  errorMsg.value = ''
+}
+
 // ---------- 收藏 ----------
 async function loadFavorites(page = 1) {
-  loading.value = true
-  errorMsg.value = ''
-  comics.value = []
+  if (page === 1) {
+    loading.value = true
+    resetList()
+  } else {
+    loadingMore.value = true
+  }
+
   try {
     const data = await userApi.getFavoriteList(page)
-    const list = data.list || []
-    comics.value = list
-    if (data.total !== undefined) {
-      updateUserInfo({ album_favorites: Number(data.total) })
+    const list = Array.isArray(data?.list) ? data.list : []
+
+    if (page === 1) {
+      comics.value = list
+    } else {
+      comics.value = comics.value.concat(list)
+    }
+
+    currentPage.value = page
+
+    // total 是总数
+    const total = Number(data?.total ?? list.length)
+    totalCount.value = total
+
+    // 还有更多？已加载 < total
+    hasMore.value = comics.value.length < total
+
+    // 用服务端 total 修正本地缓存（只在第一页时）
+    if (page === 1 && data?.total !== undefined) {
+      updateUserInfo({ album_favorites: total })
     }
   } catch (err) {
     errorMsg.value = err.message || '加载失败'
   } finally {
     loading.value = false
+    loadingMore.value = false
+    setupSentinel()
   }
 }
 
 // ---------- 追踪 ----------
 async function loadTracking(page = 1) {
-  loading.value = true
-  errorMsg.value = ''
-  comics.value = []
+  if (page === 1) {
+    loading.value = true
+    resetList()
+  } else {
+    loadingMore.value = true
+  }
+
   try {
     const data = await userApi.getTrackingList(page)
-    comics.value = data.item || []
+    const list = Array.isArray(data?.item) ? data.item : []
+
+    if (page === 1) {
+      comics.value = list
+    } else {
+      comics.value = comics.value.concat(list)
+    }
+
+    currentPage.value = page
+
+    const total = Number(data?.total ?? list.length)
+    totalCount.value = total
+
+    // 如果服务端没给 total，用"本页数量 < PAGE_SIZE"判断是否还有更多
+    if (data?.total !== undefined) {
+      hasMore.value = comics.value.length < total
+    } else {
+      hasMore.value = list.length >= PAGE_SIZE
+    }
   } catch (err) {
     errorMsg.value = err.message || '加载失败'
   } finally {
     loading.value = false
+    loadingMore.value = false
+    setupSentinel()
   }
 }
 
 // ---------- 通知 ----------
-async function loadNotifications() {
-  loading.value = true
-  errorMsg.value = ''
-  notifList.value = []
+async function loadNotifications(page = 1) {
+  if (page === 1) {
+    loading.value = true
+    notifList.value = []
+  } else {
+    loadingMore.value = true
+  }
+
   try {
-    const data = await userApi.getNotifications(notifType.value, notifPage.value)
-    let list = [], total = 0, unread = 0
+    const data = await userApi.getNotifications(notifType.value, page)
+
+    let list = [],
+      total = 0,
+      unread = 0
     if (Array.isArray(data)) {
       list = data
       total = data.length
       unread = data.filter((i) => !i.read && !i.is_read).length
     } else if (data && Array.isArray(data.list)) {
       list = data.list
-      total = data.total ?? list.length
+      total = Number(data.total ?? list.length)
       unread = data.unread ?? 0
     } else if (data && Array.isArray(data.data)) {
       list = data.data
-      total = data.total ?? list.length
+      total = Number(data.total ?? list.length)
       unread = data.unread ?? 0
     }
-    notifList.value = list
-    notifTotal.value = total
-    notifUnread.value = unread
+
+    if (page === 1) {
+      notifList.value = list
+      notifTotal.value = total
+      notifUnread.value = unread
+    } else {
+      notifList.value = notifList.value.concat(list)
+      if (unread !== undefined) notifUnread.value = unread
+    }
+
+    currentPage.value = page
+
+    if (data?.total !== undefined) {
+      notifHasMore.value = notifList.value.length < total
+    } else {
+      notifHasMore.value = list.length >= PAGE_SIZE
+    }
   } catch (err) {
     errorMsg.value = err.message || '加载失败'
   } finally {
     loading.value = false
+    loadingMore.value = false
+    setupSentinel()
   }
+}
+
+// ---------- 根据 tab 加载 ----------
+function loadPage(page = 1) {
+  if (currentTab.value === 'favorites') return loadFavorites(page)
+  if (currentTab.value === 'tracking') return loadTracking(page)
+  if (currentTab.value === 'notifications') return loadNotifications(page)
+}
+
+// ---------- 无限滚动 ----------
+function setupSentinel() {
+  // 清理旧的观察
+  if (observer) {
+    observer.disconnect()
+    observer = null
+  }
+
+  // 判断当前 tab 是否还有更多
+  const more = currentTab.value === 'notifications' ? notifHasMore.value : hasMore.value
+  if (!more) return
+
+  // 等 DOM 更新
+  nextTick(() => {
+    const el = sentinelRef.value
+    if (!el) return
+
+    observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue
+          if (loading.value || loadingMore.value) continue
+
+          const stillMore =
+            currentTab.value === 'notifications' ? notifHasMore.value : hasMore.value
+          if (!stillMore) {
+            observer?.disconnect()
+            return
+          }
+
+          loadPage(currentPage.value + 1)
+        }
+      },
+      { rootMargin: '200px' }, // 提前 200px 触发
+    )
+    observer.observe(el)
+  })
 }
 
 function switchTab(tab) {
   if (currentTab.value === tab) return
   currentTab.value = tab
-  if (tab === 'favorites') loadFavorites()
-  else if (tab === 'tracking') loadTracking()
-  else if (tab === 'notifications') loadNotifications()
+  resetList()
+
+  if (tab === 'favorites') loadFavorites(1)
+  else if (tab === 'tracking') loadTracking(1)
+  else if (tab === 'notifications') loadNotifications(1)
 }
 
 function onNotifTypeChange(type) {
   if (notifType.value === type) return
   notifType.value = type
-  notifPage.value = 1
-  loadNotifications()
+  notifList.value = []
+  notifTotal.value = 0
+  notifUnread.value = 0
+  notifHasMore.value = false
+  loadNotifications(1)
 }
 
 // ---------- 登出 ----------
@@ -122,11 +262,9 @@ function handleLogout() {
   const currentToken = props.userInfo.jwttoken
   const servers = jmApi.servers || []
 
-  // 乐观更新：先清空本地
   clearUser()
   emit('logged-out')
 
-  // 异步通知服务器
   if (logoutController) logoutController.abort()
   logoutController = new AbortController()
   const signal = logoutController.signal
@@ -142,9 +280,9 @@ function handleLogout() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'token': jmApi.accessToken.token,
-            'tokenParam': jmApi.accessToken.tokenParam,
-            'Authorization': `Bearer ${currentToken}`,
+            token: jmApi.accessToken.token,
+            tokenParam: jmApi.accessToken.tokenParam,
+            Authorization: `Bearer ${currentToken}`,
           },
           body: '',
           signal,
@@ -156,7 +294,6 @@ function handleLogout() {
         return
       } catch (err) {
         if (err.name === 'AbortError') throw err
-        // 继续重试
       }
     }
   }
@@ -188,13 +325,15 @@ function bindVisibilityRefresh() {
       if (Number(info.album_favorites) !== Number(props.userInfo.album_favorites)) {
         updateUserInfo({ album_favorites: info.album_favorites })
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
   document.addEventListener('visibilitychange', visibilityHandler)
 }
 
 onMounted(() => {
-  loadFavorites()
+  loadFavorites(1)
   bindVisibilityRefresh()
 })
 
@@ -204,6 +343,10 @@ onBeforeUnmount(() => {
     visibilityHandler = null
   }
   if (logoutController) logoutController.abort()
+  if (observer) {
+    observer.disconnect()
+    observer = null
+  }
 })
 </script>
 
@@ -224,19 +367,31 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="user-tabs">
-      <span class="user-tab" :class="{ active: currentTab === 'favorites' }" @click="switchTab('favorites')">
+      <span
+        class="user-tab"
+        :class="{ active: currentTab === 'favorites' }"
+        @click="switchTab('favorites')"
+      >
         收藏 ({{ favoriteCount }})
       </span>
-      <span class="user-tab" :class="{ active: currentTab === 'tracking' }" @click="switchTab('tracking')">
+      <span
+        class="user-tab"
+        :class="{ active: currentTab === 'tracking' }"
+        @click="switchTab('tracking')"
+      >
         追踪
       </span>
-      <span class="user-tab" :class="{ active: currentTab === 'notifications' }" @click="switchTab('notifications')">
+      <span
+        class="user-tab"
+        :class="{ active: currentTab === 'notifications' }"
+        @click="switchTab('notifications')"
+      >
         信箱
       </span>
     </div>
 
     <div id="user-list-container">
-      <!-- 加载中 -->
+      <!-- 首次加载 -->
       <div v-if="loading" class="list-loader-container">
         <div class="list-loader-spinner"></div>
         <p class="list-loader-text">加载中...</p>
@@ -268,12 +423,36 @@ onBeforeUnmount(() => {
           <ComicCard v-for="c in comics" :key="c.id" :comic="c" />
         </div>
       </template>
+
+      <!-- 加载更多 -->
+      <div v-if="loadingMore" class="list-more-loading">
+        <div class="list-loader-spinner small"></div>
+      </div>
+
+      <!-- 全部加载完 -->
+      <div
+        v-else-if="
+          !loading &&
+          !errorMsg &&
+          (currentTab === 'notifications' ? !notifHasMore : !hasMore) &&
+          (currentTab === 'notifications' ? notifList.length > 0 : comics.length > 0)
+        "
+        class="list-end-tip"
+      >
+        — 已经到底了 —
+      </div>
+
+      <!-- 无限滚动哨兵 -->
+      <div ref="sentinelRef" class="list-sentinel"></div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* ★ 覆盖 ComicCard 在 user 页面的尺寸：user.css 要求 150x200，latest 是 210x270 */
-.user-comics :deep(.comic-item) { width: 150px; }
-.user-comics :deep(.comic-item .cover) { height: 200px; }
+.user-comics :deep(.comic-item) {
+  width: 150px;
+}
+.user-comics :deep(.comic-item .cover) {
+  height: 200px;
+}
 </style>

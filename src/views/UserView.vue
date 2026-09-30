@@ -8,12 +8,11 @@ import { useLocalUser } from '@/composables/useLocalUser.js'
 import '@/styles/user.css'
 
 const { userInfo, refresh } = useUser()
-const { localUser, localUserReady } = useLocalUser()
+const { currentUser, ready } = useLocalUser()
 
-// 云端优先
 const mode = computed(() => {
   if (userInfo.value) return 'cloud'
-  if (localUser.value) return 'local'
+  if (currentUser.value) return 'local'
   return 'guest'
 })
 
@@ -24,13 +23,10 @@ onMounted(() => {
 
 <template>
   <div class="user-body">
-    <!-- 云端登录 -->
     <UserProfile v-if="mode === 'cloud'" :user-info="userInfo" @logged-out="refresh" />
 
-    <!-- 本地账号 -->
-    <LocalProfile v-else-if="mode === 'local'" :user="localUser" @logged-out="refresh" />
+    <LocalProfile v-else-if="mode === 'local'" :user="currentUser" @logged-out="refresh" />
 
-    <!-- 未登录 -->
-    <AuthForms v-else-if="localUserReady" @logged-in="refresh" />
+    <AuthForms v-else-if="ready" @logged-in="refresh" />
   </div>
 </template>

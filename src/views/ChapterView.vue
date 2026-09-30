@@ -19,11 +19,10 @@ const chapter = ref(null)
 const loading = ref(true)
 const errorMsg = ref('')
 
-const { localUser } = useLocalUser()
+const { currentUser } = useLocalUser()
 
 const comicId = computed(() => String(route.params.id))
 
-// ★ 把 .root 打上 chapter 专属 class（原 chapter.css 里 .root 只有 chapter 页需要背景）
 function addRootClass() {
   const root = document.querySelector('.root')
   if (root) root.classList.add('chapter-page-bg')
@@ -46,10 +45,10 @@ async function loadAll() {
     album.value = a
     chapter.value = c
 
-    // ★ 加载成功后记录历史（只在本地账号下）
-    if (localUser.value && a && c) {
+    // ★ 加载成功后记录历史（只在当前本地账号存在时）
+    if (currentUser.value && a && c) {
       try {
-        await localDB.addHistory({
+        await localDB.addHistory(currentUser.value.id, {
           comicId: a.id,
           name: a.name,
           author: a.author,

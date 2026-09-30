@@ -1,49 +1,76 @@
 import { ref } from 'vue'
 import { localDB } from '@/utils/localDB.js'
 
-const localUser = ref(null)
-const localUserReady = ref(false)
+const currentUser = ref(null)
+const users = ref([])
+const ready = ref(false)
+
 let _initialized = false
 
-async function initLocalUser() {
+async function init() {
   if (_initialized) return
   _initialized = true
   try {
-    const user = await localDB.getUser()
-    if (user) localUser.value = user
+    await localDB.migrateIfNeeded()
+    users.value = await localDB.getAllUsers()
+    currentUser.value = await localDB.getCurrentUser()
   } catch (e) {
-    console.warn('加载本地账号失败:', e)
+    console.warn('本地账号初始化失败:', e)
   } finally {
-    localUserReady.value = true
+    ready.value = true
   }
 }
 
-export function useLocalUser() {
-  initLocalUser()
+async function refreshUsers() {
+  users.value = await localDB.getAllUsers()
+}
 
-  async function register(username) {
-    const user = await localDB.registerUser(username)
-    localUser.value = user
+export function useLocalUser() {
+  init()
+
+  async function createUser(username) {
+    const user = await localDB.createUser(username)
+    localDB.setCurrentUserId(user.id)
+    currentUser.value = user
+    await refreshUsers()
     return user
   }
 
-  async function login() {
-    const user = await localDB.getUser()
-    if (user) {
-      localUser.value = user
-      return user
+  async function switchUser(userId) {
+    const user = await localDB.getUser(userId)
+    if (!user) return null
+    localDB.setCurrentUserId(userId)
+    currentUser.value = user
+    return user
+  }
+
+  async function deleteUser(userId) {
+    await localDB.deleteUser(userId)
+    await refreshUsers()
+
+    if (currentUser.value?.id === userId) {
+      const next = users.value[0]
+      if (next) {
+        await switchUser(next.id)
+      } else {
+        currentUser.value = null
+      }
     }
-    return null
   }
 
   function logout() {
-    localUser.value = null
+    localDB.setCurrentUserId(null)
+    currentUser.value = null
   }
 
-  async function destroy() {
-    await localDB.clearAll()
-    localUser.value = null
+  return {
+    currentUser,
+    users,
+    ready,
+    createUser,
+    switchUser,
+    deleteUser,
+    logout,
+    refreshUsers,
   }
-
-  return { localUser, localUserReady, register, login, logout, destroy }
 }

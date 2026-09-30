@@ -1,27 +1,22 @@
 import { Capacitor } from '@capacitor/core'
 import { localDB } from './localDB.js'
 
-/** 导出为 JSON 字符串 */
-export async function exportToJSON() {
-  const data = await localDB.exportAll()
+export async function exportToJSON(userId) {
+  const data = await localDB.exportAll(userId)
   return JSON.stringify(data, null, 2)
 }
 
-/** 生成文件名 */
-function makeFilename() {
+function makeFilename(username) {
   const d = new Date()
   const pad = (n) => String(n).padStart(2, '0')
-  return `jmviewer-backup-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`
+  const suffix = username ? `-${username}` : ''
+  return `jmviewer-backup${suffix}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`
 }
 
-/**
- * 导出为文件
- * - 原生平台：写到 Cache，弹系统分享面板（用户可选"存储到文件"/AirDrop/微信等）
- * - Web：浏览器下载
- */
-export async function exportAsFile() {
-  const json = await exportToJSON()
-  const filename = makeFilename()
+export async function exportAsFile(userId) {
+  const data = await localDB.exportAll(userId)
+  const json = JSON.stringify(data, null, 2)
+  const filename = makeFilename(data.user?.username)
 
   if (Capacitor.isNativePlatform()) {
     const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem')
@@ -42,7 +37,6 @@ export async function exportAsFile() {
     return { filename }
   }
 
-  // Web
   downloadJSONWeb(json, filename)
   return { filename }
 }
@@ -59,20 +53,12 @@ function downloadJSONWeb(jsonStr, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-/**
- * 从 JSON 字符串导入
- */
-export async function importFromJSON(jsonStr) {
+export async function importFromJSON(userId, jsonStr) {
   let data
   try {
     data = JSON.parse(jsonStr)
   } catch (e) {
     throw new Error('JSON 解析失败：' + e.message)
   }
-  return localDB.importAll(data)
-}
-
-/** 保留旧的 downloadJSON 接口 */
-export function downloadJSON(jsonStr, filename) {
-  downloadJSONWeb(jsonStr, filename || makeFilename())
+  return localDB.importAll(userId, data)
 }

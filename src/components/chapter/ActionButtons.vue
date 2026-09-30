@@ -9,7 +9,7 @@ import { localDB } from '@/utils/localDB.js'
 const props = defineProps({ comicId: { type: [String, Number], required: true } })
 const router = useRouter()
 const { userInfo, updateUserInfo } = useUser()
-const { localUser } = useLocalUser()
+const { currentUser } = useLocalUser()
 
 const isFavorite = ref(false)
 const isTracking = ref(false)
@@ -18,7 +18,7 @@ const toast = ref(null)
 
 const mode = computed(() => {
   if (userInfo.value) return 'cloud'
-  if (localUser.value) return 'local'
+  if (currentUser.value) return 'local'
   return 'guest'
 })
 
@@ -38,8 +38,8 @@ function checkLogin() {
 }
 
 /**
- * ★ 新增：泛化解析“追踪状态”返回值
- * 兼容 true / 'true' / 1 / '1' / { state: true } / { status: 1 } 等
+ * 泛化解析“追踪状态”返回值
+ * 兼容 true / 'true' / 1 / '1' / { state: true } 等
  */
 function normalizeTrackingStatus(result) {
   if (result === true || result === 'true') return true
@@ -48,7 +48,6 @@ function normalizeTrackingStatus(result) {
   if (result === 0 || result === '0') return false
 
   if (result && typeof result === 'object') {
-    // 常见的几种字段名
     const keys = [
       'state',
       'status',
@@ -64,7 +63,6 @@ function normalizeTrackingStatus(result) {
         return normalizeTrackingStatus(result[key])
       }
     }
-    // 兜底：如果对象只有一个布尔字段
     const values = Object.values(result)
     if (values.length === 1) return normalizeTrackingStatus(values[0])
   }
@@ -77,7 +75,7 @@ async function loadInitialStates() {
   // 本地账号：只查本地收藏，追踪不支持
   if (mode.value === 'local') {
     try {
-      isFavorite.value = await localDB.isFavorite(props.comicId)
+      isFavorite.value = await localDB.isFavorite(currentUser.value.id, props.comicId)
     } catch (e) {
       console.warn('读取本地收藏失败:', e)
     }
@@ -100,7 +98,6 @@ async function loadInitialStates() {
       return false
     })
 
-    // ★ 用泛化函数解析
     isTracking.value = normalizeTrackingStatus(trackResult)
   } catch (e) {
     console.warn('加载初始状态失败:', e)
@@ -113,16 +110,17 @@ async function toggleFavorite() {
 
   isLoading.value = true
 
-  // 本地账号
+  // 本地账号：写 IndexedDB（按 userId 隔离）
   if (mode.value === 'local') {
+    const uid = currentUser.value.id
     try {
       if (isFavorite.value) {
-        await localDB.removeFavorite(props.comicId)
+        await localDB.removeFavorite(uid, props.comicId)
         isFavorite.value = false
         showToast('已取消收藏')
       } else {
         const album = await fetchAlbumInfo()
-        await localDB.addFavorite(album)
+        await localDB.addFavorite(uid, album)
         isFavorite.value = true
         showToast('已收藏到本地')
       }
@@ -178,7 +176,6 @@ async function toggleTracking() {
   isLoading.value = true
   try {
     await userApi.toggleTracking(props.comicId)
-    // ★ 切换后再查一次，用泛化函数解析
     const newStatus = await userApi.getTrackingStatus(props.comicId).catch(() => false)
     isTracking.value = normalizeTrackingStatus(newStatus)
     showToast(isTracking.value ? '已开启追踪' : '已取消追踪')

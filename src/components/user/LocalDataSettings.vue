@@ -2,15 +2,15 @@
 import { ref } from 'vue'
 import { localDB } from '@/utils/localDB.js'
 import { exportAsFile, importFromJSON } from '@/utils/dataExport.js'
-import { useLocalUser } from '@/composables/useLocalUser.js'
 
+const props = defineProps({
+  userId: { type: String, required: true },
+})
 const emit = defineEmits(['imported'])
-const { destroy } = useLocalUser()
 
 const toast = ref(null)
 const importing = ref(false)
 const fileInputRef = ref(null)
-
 const stats = ref({ favorites: 0, history: 0 })
 const exporting = ref(false)
 
@@ -22,7 +22,10 @@ function showToast(msg, type = 'success') {
 }
 
 async function refreshStats() {
-  const [favs, hist] = await Promise.all([localDB.getFavorites(), localDB.getHistory()])
+  const [favs, hist] = await Promise.all([
+    localDB.getFavorites(props.userId),
+    localDB.getHistory(props.userId),
+  ])
   stats.value = { favorites: favs.length, history: hist.length }
 }
 refreshStats()
@@ -31,7 +34,7 @@ async function handleExportDownload() {
   if (exporting.value) return
   exporting.value = true
   try {
-    await exportAsFile()
+    await exportAsFile(props.userId)
     showToast('已导出备份')
   } catch (e) {
     const msg = e?.message || ''
@@ -54,7 +57,7 @@ async function handleFileChange(e) {
   importing.value = true
   try {
     const text = await file.text()
-    const result = await importFromJSON(text)
+    const result = await importFromJSON(props.userId, text)
     showToast(`导入成功：${result.favorites} 个收藏 / ${result.history} 条历史`)
     await refreshStats()
     emit('imported')
@@ -67,7 +70,7 @@ async function handleFileChange(e) {
 
 async function handleClearHistory() {
   if (!confirm('确定要清空所有浏览历史吗？此操作不可恢复。')) return
-  await localDB.clearHistory()
+  await localDB.clearHistory(props.userId)
   await refreshStats()
   showToast('历史已清空')
   emit('imported')
@@ -75,20 +78,9 @@ async function handleClearHistory() {
 
 async function handleClearFavorites() {
   if (!confirm('确定要清空所有本地收藏吗？此操作不可恢复。')) return
-  const list = await localDB.getFavorites()
-  for (const item of list) {
-    await localDB.removeFavorite(item.comicId)
-  }
+  await localDB.clearFavorites(props.userId)
   await refreshStats()
   showToast('收藏已清空')
-  emit('imported')
-}
-
-async function handleDestroy() {
-  if (!confirm('确定要删除本地账号及所有数据吗？此操作不可恢复。')) return
-  if (!confirm('再次确认：所有收藏、历史、账号信息都会被永久删除。')) return
-  await destroy()
-  showToast('本地账号已删除')
   emit('imported')
 }
 </script>
@@ -139,11 +131,6 @@ async function handleDestroy() {
       <div class="btn-row">
         <button class="settings-btn danger-btn" @click="handleClearHistory">清空历史</button>
         <button class="settings-btn danger-btn" @click="handleClearFavorites">清空收藏</button>
-      </div>
-      <div class="btn-row">
-        <button class="settings-btn danger-btn full" @click="handleDestroy">
-          删除本地账号及全部数据
-        </button>
       </div>
     </div>
   </div>

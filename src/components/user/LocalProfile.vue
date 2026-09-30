@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { localDB } from '@/utils/localDB.js'
 import { useLocalUser } from '@/composables/useLocalUser.js'
 import { jmApi } from '@/api/JmcomicApi.js'
@@ -11,7 +11,7 @@ const emit = defineEmits(['logged-out'])
 
 const { logout } = useLocalUser()
 
-const currentTab = ref('favorites') // favorites | history | settings
+const currentTab = ref('favorites')
 const favorites = ref([])
 const history = ref([])
 const loading = ref(false)
@@ -22,7 +22,6 @@ const createdDate = computed(() => {
   return new Date(props.user.createdAt).toLocaleDateString('zh-CN')
 })
 
-// 把本地记录映射成 ComicCard 需要的形状
 const favoriteComics = computed(() =>
   favorites.value.map((f) => ({
     id: f.comicId,
@@ -44,7 +43,7 @@ const historyComics = computed(() =>
 async function loadFavorites() {
   loading.value = true
   try {
-    favorites.value = await localDB.getFavorites()
+    favorites.value = await localDB.getFavorites(props.user.id)
   } finally {
     loading.value = false
   }
@@ -53,7 +52,7 @@ async function loadFavorites() {
 async function loadHistory() {
   loading.value = true
   try {
-    history.value = await localDB.getHistory()
+    history.value = await localDB.getHistory(props.user.id)
   } finally {
     loading.value = false
   }
@@ -87,6 +86,7 @@ async function refreshAll() {
   await Promise.all([loadFavorites(), loadHistory()])
 }
 
+watch(() => props.user.id, refreshAll)
 onMounted(refreshAll)
 </script>
 
@@ -127,26 +127,23 @@ onMounted(refreshAll)
     </div>
 
     <div class="user-list-container">
-      <!-- 加载中 -->
       <div v-if="loading" class="list-loader-container">
         <div class="list-loader-spinner"></div>
         <p class="list-loader-text">加载中...</p>
       </div>
 
-      <!-- 本地收藏 -->
       <template v-else-if="currentTab === 'favorites'">
         <div v-if="favoriteComics.length === 0" class="list-empty-container">
-          <p class="list-empty-text">暂无本地收藏</p>
+          <p class="list-empty-text">此账号暂无本地收藏</p>
         </div>
         <div v-else class="comics-cr local-comics">
           <ComicCard v-for="c in favoriteComics" :key="c.id" :comic="c" />
         </div>
       </template>
 
-      <!-- 浏览历史 -->
       <template v-else-if="currentTab === 'history'">
         <div v-if="historyComics.length === 0" class="list-empty-container">
-          <p class="list-empty-text">暂无浏览记录</p>
+          <p class="list-empty-text">此账号暂无浏览记录</p>
         </div>
         <div v-else class="history-list">
           <RouterLink
@@ -161,18 +158,14 @@ onMounted(refreshAll)
             <div class="history-info">
               <h3 class="history-name">{{ item.name }}</h3>
               <p class="history-author">{{ item.author }}</p>
-              <p class="history-chapter" v-if="item._chapterName">
-                上次读到：{{ item._chapterName }}
-              </p>
               <p class="history-time">{{ formatTime(item._lastReadAt) }}</p>
             </div>
           </RouterLink>
         </div>
       </template>
 
-      <!-- 数据管理 -->
       <template v-else>
-        <LocalDataSettings :user="user" @imported="refreshAll" />
+        <LocalDataSettings :user-id="user.id" @imported="refreshAll" />
       </template>
     </div>
   </div>
