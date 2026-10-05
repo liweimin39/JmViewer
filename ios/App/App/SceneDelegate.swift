@@ -13,10 +13,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window?.rootViewController = bridgeVC
         window?.makeKeyAndVisible()
 
-        // 强制加载视图，确保 bridge 已初始化
         bridgeVC.loadViewIfNeeded()
 
-        // 注册自定义插件
         if let bridge = bridgeVC.bridge {
             bridge.registerPluginInstance(StoragePermissionPlugin())
         }
@@ -36,10 +34,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 // =====================================================
 // MARK: - StoragePermissionPlugin
 // =====================================================
-// 直接定义在 SceneDelegate.swift 里，避免单独文件的 target 问题
 
 @objc(StoragePermissionPlugin)
-public class StoragePermissionPlugin: CAPPlugin {
+public class StoragePermissionPlugin: CAPPlugin, CAPBridgedPlugin {
+
+    // ★ Capacitor 8 必须声明这三个属性
+    public let identifier = "StoragePermissionPlugin"
+    public let jsName = "StoragePermission"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "openFolder", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "checkAllFilesAccess", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openAllFilesAccess", returnType: CAPPluginReturnPromise),
+    ]
 
     @objc func openFolder(_ call: CAPPluginCall) {
         guard let path = call.getString("path") else {
@@ -71,12 +77,10 @@ public class StoragePermissionPlugin: CAPPlugin {
     }
 
     @objc func checkAllFilesAccess(_ call: CAPPluginCall) {
-        // iOS 无此权限概念
         call.resolve(["granted": true])
     }
 
     @objc func openAllFilesAccess(_ call: CAPPluginCall) {
-        // iOS 无需跳转
         call.resolve()
     }
 
