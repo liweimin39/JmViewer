@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { jmApi } from '@/api/JmcomicApi.js'
 import ComicHead from '@/components/chapter/ComicHead.vue'
 import EvaluationBar from '@/components/chapter/EvaluationBar.vue'
@@ -13,6 +13,7 @@ import { localDB } from '@/utils/localDB.js'
 import '@/styles/chapter.css'
 
 const route = useRoute()
+const router = useRouter()
 
 const album = ref(null)
 const chapter = ref(null)
@@ -45,7 +46,6 @@ async function loadAll() {
     album.value = a
     chapter.value = c
 
-    // ★ 加载成功后记录历史（只在当前本地账号存在时）
     if (currentUser.value && a && c) {
       try {
         await localDB.addHistory(currentUser.value.id, {
@@ -70,6 +70,22 @@ async function loadAll() {
 function scrollToContent() {
   document.querySelector('.comic-content-cr')?.scrollIntoView({ behavior: 'smooth' })
 }
+
+// ============ 下载 → 跳转独立页面 ============
+
+/** ComicHead 的"下载"按钮 → 跳转下载页（无预选） */
+function onDownloadAll() {
+  if (!album.value) return
+  router.push(`/download/${album.value.id}`)
+}
+
+/** 章节列表某一章的"下载"按钮 → 跳转下载页并预选该章 */
+function onDownloadChapter(chapterItem) {
+  if (!album.value) return
+  router.push(`/download/${album.value.id}?preselect=${chapterItem.id}`)
+}
+
+// ==========================================
 
 watch(comicId, (newId, oldId) => {
   if (newId === oldId) return
@@ -99,7 +115,7 @@ onBeforeUnmount(() => {
   <div v-else-if="errorMsg" class="chapter-page-error">{{ errorMsg }}</div>
 
   <template v-else-if="album && chapter">
-    <ComicHead :album="album" @read="scrollToContent" />
+    <ComicHead :album="album" @read="scrollToContent" @download-all="onDownloadAll" />
 
     <div class="body">
       <div class="body-left">
@@ -114,7 +130,12 @@ onBeforeUnmount(() => {
 
         <CommentList :album="album" />
 
-        <ChapterList :series="chapter.series" :current-id="comicId" />
+        <ChapterList
+          :series="chapter.series"
+          :current-id="comicId"
+          :album-id="album.id"
+          @download="onDownloadChapter"
+        />
 
         <ComicContent :chapter="chapter" />
       </div>

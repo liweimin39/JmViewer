@@ -25,7 +25,6 @@ onMounted(async () => {
         </div>
         <div class="user-info">
           <h2>{{ c.username }}</h2>
-          <!-- ★ 修复：用 v-html 渲染 HTML 内容，与原代码 innerHTML 行为一致 -->
           <p class="comment-text" v-html="c.content"></p>
         </div>
       </div>

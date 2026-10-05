@@ -11,30 +11,26 @@ const emit = defineEmits(['logged-out'])
 
 const { clearUser, updateUserInfo } = useUser()
 
-const currentTab = ref('favorites') // favorites | tracking | notifications
+const currentTab = ref('favorites')
 
-// ---------- 通用列表状态 ----------
-const loading = ref(false) // 首次加载
-const loadingMore = ref(false) // 加载下一页
+const loading = ref(false)
+const loadingMore = ref(false)
 const errorMsg = ref('')
 const comics = ref([])
 const currentPage = ref(1)
 const totalCount = ref(0)
 const hasMore = ref(false)
-const PAGE_SIZE = 80 // 兜底每页数量
+const PAGE_SIZE = 80
 
-// 通知 tab 的状态
 const notifType = ref('all')
 const notifList = ref([])
 const notifTotal = ref(0)
 const notifUnread = ref(0)
 const notifHasMore = ref(false)
 
-// 哨兵元素，用于无限滚动
 const sentinelRef = ref(null)
 let observer = null
 
-// 登出请求的 AbortController
 let logoutController = null
 const isLoggingOut = ref(false)
 
@@ -45,7 +41,6 @@ const avatarUrl = computed(() => {
 
 const favoriteCount = computed(() => Number(props.userInfo.album_favorites) || 0)
 
-// ---------- 重置列表状态 ----------
 function resetList() {
   comics.value = []
   currentPage.value = 1
@@ -67,22 +62,14 @@ async function loadFavorites(page = 1) {
     const data = await userApi.getFavoriteList(page)
     const list = Array.isArray(data?.list) ? data.list : []
 
-    if (page === 1) {
-      comics.value = list
-    } else {
-      comics.value = comics.value.concat(list)
-    }
+    if (page === 1) comics.value = list
+    else comics.value = comics.value.concat(list)
 
     currentPage.value = page
-
-    // total 是总数
     const total = Number(data?.total ?? list.length)
     totalCount.value = total
-
-    // 还有更多？已加载 < total
     hasMore.value = comics.value.length < total
 
-    // 用服务端 total 修正本地缓存（只在第一页时）
     if (page === 1 && data?.total !== undefined) {
       updateUserInfo({ album_favorites: total })
     }
@@ -108,18 +95,13 @@ async function loadTracking(page = 1) {
     const data = await userApi.getTrackingList(page)
     const list = Array.isArray(data?.item) ? data.item : []
 
-    if (page === 1) {
-      comics.value = list
-    } else {
-      comics.value = comics.value.concat(list)
-    }
+    if (page === 1) comics.value = list
+    else comics.value = comics.value.concat(list)
 
     currentPage.value = page
-
     const total = Number(data?.total ?? list.length)
     totalCount.value = total
 
-    // 如果服务端没给 total，用"本页数量 < PAGE_SIZE"判断是否还有更多
     if (data?.total !== undefined) {
       hasMore.value = comics.value.length < total
     } else {
@@ -188,7 +170,6 @@ async function loadNotifications(page = 1) {
   }
 }
 
-// ---------- 根据 tab 加载 ----------
 function loadPage(page = 1) {
   if (currentTab.value === 'favorites') return loadFavorites(page)
   if (currentTab.value === 'tracking') return loadTracking(page)
@@ -197,17 +178,14 @@ function loadPage(page = 1) {
 
 // ---------- 无限滚动 ----------
 function setupSentinel() {
-  // 清理旧的观察
   if (observer) {
     observer.disconnect()
     observer = null
   }
 
-  // 判断当前 tab 是否还有更多
   const more = currentTab.value === 'notifications' ? notifHasMore.value : hasMore.value
   if (!more) return
 
-  // 等 DOM 更新
   nextTick(() => {
     const el = sentinelRef.value
     if (!el) return
@@ -228,7 +206,7 @@ function setupSentinel() {
           loadPage(currentPage.value + 1)
         }
       },
-      { rootMargin: '200px' }, // 提前 200px 触发
+      { rootMargin: '200px' },
     )
     observer.observe(el)
   })
@@ -252,6 +230,36 @@ function onNotifTypeChange(type) {
   notifUnread.value = 0
   notifHasMore.value = false
   loadNotifications(1)
+}
+
+// ★ 通知已读/未读状态变更
+function onNotificationUpdated({ id, read }) {
+  const idx = notifList.value.findIndex((n) => {
+    const nid = n?.id ?? n?.notificationId ?? n?.nid
+    return String(nid) === String(id)
+  })
+  if (idx === -1) return
+
+  const item = notifList.value[idx]
+  const wasRead = !!(item.read || item.is_read)
+  if (wasRead === read) return
+
+  // 重建数组触发响应式
+  notifList.value = notifList.value.map((n, i) => {
+    if (i !== idx) return n
+    return {
+      ...n,
+      read: read ? 1 : 0,
+      is_read: read,
+    }
+  })
+
+  // 调整未读数
+  if (read) {
+    notifUnread.value = Math.max(0, notifUnread.value - 1)
+  } else {
+    notifUnread.value = notifUnread.value + 1
+  }
 }
 
 // ---------- 登出 ----------
@@ -391,19 +399,15 @@ onBeforeUnmount(() => {
     </div>
 
     <div id="user-list-container">
-      <!-- 首次加载 -->
       <div v-if="loading" class="list-loader-container">
         <div class="list-loader-spinner"></div>
         <p class="list-loader-text">加载中...</p>
       </div>
 
-      <!-- 错误 -->
       <div v-else-if="errorMsg" class="list-error-container">
-        <span class="list-error-icon">⚠️</span>
         <p class="list-error-text">{{ errorMsg }}</p>
       </div>
 
-      <!-- 通知列表 -->
       <NotificationList
         v-else-if="currentTab === 'notifications'"
         :type="notifType"
@@ -411,12 +415,11 @@ onBeforeUnmount(() => {
         :total="notifTotal"
         :unread="notifUnread"
         @change-type="onNotifTypeChange"
+        @updated="onNotificationUpdated"
       />
 
-      <!-- 收藏 / 追踪 -->
       <template v-else>
         <div v-if="comics.length === 0" class="list-empty-container">
-          <span class="list-empty-icon">📭</span>
           <p class="list-empty-text">{{ currentTab === 'favorites' ? '暂无收藏' : '暂无追踪' }}</p>
         </div>
         <div v-else class="comics-cr user-comics">
@@ -424,12 +427,10 @@ onBeforeUnmount(() => {
         </div>
       </template>
 
-      <!-- 加载更多 -->
       <div v-if="loadingMore" class="list-more-loading">
         <div class="list-loader-spinner small"></div>
       </div>
 
-      <!-- 全部加载完 -->
       <div
         v-else-if="
           !loading &&
@@ -442,7 +443,6 @@ onBeforeUnmount(() => {
         — 已经到底了 —
       </div>
 
-      <!-- 无限滚动哨兵 -->
       <div ref="sentinelRef" class="list-sentinel"></div>
     </div>
   </div>

@@ -294,7 +294,7 @@ class UserApi {
       method: 'GET',
       headers: this._getHeaders(true),
     }
-    const result = await this._requestWithRetry(
+    return this._requestWithRetry(
       (i) => `https://${jmApi.servers[i]}/album_sertracking?id=${albumId}`,
       options,
     )
@@ -312,6 +312,22 @@ class UserApi {
       (i) => `https://${jmApi.servers[i]}/notifications?type=${type}&page=${page}`,
       options,
     )
+  }
+
+  // ★ 标记通知已读/未读
+  // @param id 通知 ID
+  // @param read true = 已读, false = 未读
+  async markNotificationRead(id, read) {
+    const body = new URLSearchParams({
+      id: String(id),
+      read: read ? '1' : '0',
+    })
+    const options = {
+      method: 'POST',
+      headers: this._getHeaders(true),
+      body: body.toString(),
+    }
+    return this._requestWithRetry((i) => `https://${jmApi.servers[i]}/notifications`, options)
   }
 }
 

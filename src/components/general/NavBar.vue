@@ -6,7 +6,7 @@ const router = useRouter()
 const route = useRoute()
 
 const drawerOpen = ref(false)
-const drawerDisplay = ref('none')     // 控制 display: none / block
+const drawerDisplay = ref('none') // 控制 display: none / block
 const keyword = ref('')
 const userName = ref('登录')
 
@@ -14,20 +14,25 @@ const navItems = [
   { name: '主页', to: '/' },
   { name: '最新', to: '/latest' },
   { name: '分类', to: '/categories' },
-  { name: '历史', to: null },          // 无路由，占位
+  { name: '历史', to: null }, // 无路由，占位
   { name: '设置', to: '/setting' },
+  { name: '下载', to: '/downloads' },
 ]
 
 // ---- 抽屉开合：用两步动画还原原 CSS 过渡 ----
 function openDrawer() {
   drawerDisplay.value = 'block'
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    drawerOpen.value = true
-  }))
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      drawerOpen.value = true
+    }),
+  )
 }
 function closeDrawer() {
   drawerOpen.value = false
-  setTimeout(() => { drawerDisplay.value = 'none' }, 400) // 与 CSS transition 时间对齐
+  setTimeout(() => {
+    drawerDisplay.value = 'none'
+  }, 400) // 与 CSS transition 时间对齐
 }
 
 function onSearch() {
@@ -45,7 +50,9 @@ function isActive(to) {
 onMounted(() => {
   const info = localStorage.getItem('userInfo')
   if (info) {
-    try { userName.value = JSON.parse(info).username || '登录' } catch {}
+    try {
+      userName.value = JSON.parse(info).username || '登录'
+    } catch {}
   }
 })
 </script>
@@ -80,7 +87,8 @@ onMounted(() => {
           :class="{ active: isActive(item.to) }"
           :to="item.to || route.fullPath"
           @click="item.to && closeDrawer()"
-        >{{ item.name }}</RouterLink>
+          >{{ item.name }}</RouterLink
+        >
         <RouterLink
           class="mn-item user-nav-link"
           :class="{ active: route.path === '/user' }"

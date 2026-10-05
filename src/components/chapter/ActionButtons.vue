@@ -38,7 +38,7 @@ function checkLogin() {
 }
 
 /**
- * 泛化解析“追踪状态”返回值
+ * 泛化解析"追踪状态"返回值
  * 兼容 true / 'true' / 1 / '1' / { state: true } 等
  */
 function normalizeTrackingStatus(result) {
@@ -110,7 +110,7 @@ async function toggleFavorite() {
 
   isLoading.value = true
 
-  // 本地账号：写 IndexedDB（按 userId 隔离）
+  // 本地账号：写 IndexedDB
   if (mode.value === 'local') {
     const uid = currentUser.value.id
     try {
