@@ -8,27 +8,36 @@ const { granted, checking, androidVersion, needsAllFilesAccess, check, request }
   useStoragePermission()
 
 let resumeHandler = null
+let checkTimer = null
 
 async function handleRequest() {
   await request()
 
-  // 跳系统设置后，等用户切回来
   if (needsAllFilesAccess) {
-    // 监听 App 恢复前台
+    // 监听 App 从后台回到前台
     const { App: CapApp } = await import('@capacitor/app')
+
+    // 清旧监听
+    if (resumeHandler) {
+      resumeHandler.remove()
+      resumeHandler = null
+    }
+
     resumeHandler = await CapApp.addListener('resume', async () => {
-      // 用户从设置返回，重新检测
-      const ok = await check()
-      if (ok) {
-        if (resumeHandler) {
-          resumeHandler.remove()
-          resumeHandler = null
+      // 用户从设置返回，延迟 500ms 再检测（等系统刷新）
+      if (checkTimer) clearTimeout(checkTimer)
+      checkTimer = setTimeout(async () => {
+        const ok = await check()
+        if (ok) {
+          if (resumeHandler) {
+            resumeHandler.remove()
+            resumeHandler = null
+          }
+          emit('granted')
         }
-        emit('granted')
-      }
+      }, 500)
     })
   } else {
-    // Android 10-：系统弹窗返回后立即检测
     if (granted.value) emit('granted')
   }
 }
@@ -47,6 +56,10 @@ onBeforeUnmount(() => {
     resumeHandler.remove()
     resumeHandler = null
   }
+  if (checkTimer) {
+    clearTimeout(checkTimer)
+    checkTimer = null
+  }
 })
 </script>
 
@@ -56,17 +69,17 @@ onBeforeUnmount(() => {
       <h2>需要存储权限</h2>
 
       <p v-if="needsAllFilesAccess" class="perm-desc">
-        Android {{ androidVersion }} 需要"所有文件访问"权限才能把下载的漫画保存到公共目录
+        Android {{ androidVersion }} 需要「所有文件访问」权限才能把漫画保存到
         <code>/storage/emulated/0/JmViewer/</code>
       </p>
-      <p v-else class="perm-desc">需要"读写存储"权限才能把下载的漫画保存到公共目录</p>
+      <p v-else class="perm-desc">需要「读写存储」权限才能把漫画保存到公共目录</p>
 
       <div class="perm-steps" v-if="needsAllFilesAccess">
         <p class="perm-steps-title">操作步骤：</p>
         <ol>
-          <li>点击下方"去授权"按钮</li>
-          <li>在系统设置里找到 <strong>「JmViewer」</strong></li>
-          <li>打开 <strong>「允许访问所有文件」</strong> 或 <strong>「所有文件访问」</strong></li>
+          <li>点击下方「去授权」按钮</li>
+          <li>在跳转的页面找到 <strong>「允许管理所有文件」</strong> 开关</li>
+          <li>打开开关</li>
           <li>返回本 App 即可</li>
         </ol>
       </div>
