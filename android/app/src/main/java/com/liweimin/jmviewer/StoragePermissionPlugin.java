@@ -9,8 +9,6 @@ import android.provider.DocumentsContract;
 import android.provider.Settings;
 import android.widget.Toast;
 
-import androidx.core.content.FileProvider;
-
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -24,12 +22,15 @@ public class StoragePermissionPlugin extends Plugin {
 
     // ==================== 权限 ====================
 
+    /** 打开"所有文件访问"设置页（Android 11+） */
     @PluginMethod
     public void openAllFilesAccess(PluginCall call) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             call.reject("当前系统版本无需此权限");
             return;
         }
+
+        // 尝试 1：直接跳到本 App 的"所有文件访问"页面
         try {
             Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
             intent.setData(Uri.parse("package:" + getContext().getPackageName()));
@@ -38,6 +39,7 @@ public class StoragePermissionPlugin extends Plugin {
             return;
         } catch (Exception ignored) {}
 
+        // 尝试 2：打开"所有文件访问"列表页
         try {
             Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
             getActivity().startActivity(intent);
@@ -45,6 +47,7 @@ public class StoragePermissionPlugin extends Plugin {
             return;
         } catch (Exception ignored) {}
 
+        // 尝试 3：打开本 App 的应用详情页
         try {
             Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
             intent.setData(Uri.parse("package:" + getContext().getPackageName()));
@@ -55,6 +58,7 @@ public class StoragePermissionPlugin extends Plugin {
         }
     }
 
+    /** 检查是否已授权"所有文件访问" */
     @PluginMethod
     public void checkAllFilesAccess(PluginCall call) {
         JSObject result = new JSObject();
@@ -76,7 +80,7 @@ public class StoragePermissionPlugin extends Plugin {
             return;
         }
 
-        // 规范化路径
+        // 规范化路径：去掉 file:// 前缀
         String filePath = path;
         if (filePath.startsWith("file://")) {
             filePath = filePath.substring(7);
@@ -85,6 +89,7 @@ public class StoragePermissionPlugin extends Plugin {
 
         File folder = new File(filePath);
         if (!folder.exists() || !folder.isDirectory()) {
+            // 尝试父目录
             File parent = folder.getParentFile();
             if (parent != null && parent.exists() && parent.isDirectory()) {
                 folder = parent;
@@ -101,7 +106,7 @@ public class StoragePermissionPlugin extends Plugin {
             return;
         }
 
-        // ② 降级：系统文件管理器（用 DocumentsContract URI）
+        // ② 降级：系统文件管理器
         if (tryOpenWithSystemFileManager(filePath)) {
             call.resolve();
             return;
@@ -114,67 +119,61 @@ public class StoragePermissionPlugin extends Plugin {
 
     // ==================== MT 管理器 ====================
 
+    /**
+     * 唤醒 MT 管理器并定位到指定文件夹
+     * MT 管理器的 Intent 规范参考：
+     *   action: bin.mt.plus.ACTION_SHORTCUT
+     *   component: bin.mt.plus/.Main
+     *   extras: folderColorIcon=ic_folder, path=<绝对路径>, operation=goto
+     */
     private boolean tryOpenWithMT(String filePath) {
-        // 检查是否安装
+        // 1. 检查 MT 管理器是否安装
         try {
             getContext().getPackageManager().getPackageInfo("bin.mt.plus", 0);
         } catch (Exception e) {
             return false;   // 未安装
         }
 
-        // 方案 1：直接 setClassName + path extra
-        String[] activityNames = {
-            "bin.mt.plus.Main",
-            "bin.mt.plus.MainActivity",
-            "bin.mt.plus.HomeActivity",
-            "bin.mt.plus.activity.MainActivity"
-        };
-
-        for (String activityName : activityNames) {
+        // 2. 构建 Intent
+        try {
+            Intent intent = new Intent();
+            intent.setAction("bin.mt.plus.ACTION_SHORTCUT");
+            intent.setComponent(new ComponentName("bin.mt.plus", "bin.mt.plus.Main"));
+            intent.putExtra("folderColorIcon", "ic_folder");
+            intent.putExtra("path", filePath);
+            intent.putExtra("operation", "goto");
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getActivity().startActivity(intent);
+            return true;
+        } catch (Exception e) {
+            // 尝试备用 Component
             try {
                 Intent intent = new Intent();
-                intent.setComponent(new ComponentName("bin.mt.plus", activityName));
+                intent.setAction("bin.mt.plus.ACTION_SHORTCUT");
+                intent.setComponent(new ComponentName("bin.mt.plus", "bin.mt.plus.OpenFileActivity"));
+                intent.putExtra("folderColorIcon", "ic_folder");
                 intent.putExtra("path", filePath);
                 intent.putExtra("operation", "goto");
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 getActivity().startActivity(intent);
                 return true;
-            } catch (Exception ignored) {
-                // 尝试下一个
+            } catch (Exception e2) {
+                return false;
             }
         }
-
-        // 方案 2：ACTION_VIEW + file:// + setPackage
-        try {
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.fromFile(new File(filePath)), "resource/folder");
-            intent.setPackage("bin.mt.plus");
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            getActivity().startActivity(intent);
-            return true;
-        } catch (Exception ignored) {}
-
-        // 方案 3：自定义 Action
-        try {
-            Intent intent = new Intent("bin.mt.plus.ACTION_SHORTCUT");
-            intent.setPackage("bin.mt.plus");
-            intent.putExtra("path", filePath);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            getActivity().startActivity(intent);
-            return true;
-        } catch (Exception ignored) {}
-
-        return false;
     }
 
     // ==================== 系统文件管理器 ====================
 
+    /**
+     * 用系统文件管理器打开并定位到文件夹
+     * 使用 DocumentsContract 构建原生 URI，比 FileProvider 更可靠
+     */
     private boolean tryOpenWithSystemFileManager(String filePath) {
-        // 关键：把绝对路径转成 DocumentsContract 的 URI
-        // /storage/emulated/0/JmViewer/Comics/xxx
-        // → primary:JmViewer/Comics/xxx
+        // 把绝对路径转成 primary: 相对路径
         String relativePath = toRelativeStoragePath(filePath);
+
+        // 方案 1：用 DocumentsContract.buildDocumentUri（最可靠）
         if (relativePath != null) {
             try {
                 Uri documentUri = DocumentsContract.buildDocumentUri(
@@ -194,10 +193,11 @@ public class StoragePermissionPlugin extends Plugin {
             } catch (Exception ignored) {}
         }
 
-        // 降级：ACTION_OPEN_DOCUMENT_TREE（让用户手动选）
+        // 方案 2：ACTION_OPEN_DOCUMENT_TREE（让用户手动导航，但至少能定位）
         try {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
             if (relativePath != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 Uri documentUri = DocumentsContract.buildDocumentUri(
                     "com.android.externalstorage.documents",
@@ -205,6 +205,17 @@ public class StoragePermissionPlugin extends Plugin {
                 );
                 intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, documentUri);
             }
+
+            getActivity().startActivity(intent);
+            return true;
+        } catch (Exception ignored) {}
+
+        // 方案 3：兜底
+        try {
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("*/*");
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             getActivity().startActivity(intent);
             return true;
         } catch (Exception ignored) {}
@@ -214,13 +225,13 @@ public class StoragePermissionPlugin extends Plugin {
 
     /**
      * 把绝对路径转成 "JmViewer/Comics/xxx" 形式
+     * 例：/storage/emulated/0/JmViewer/Comics/123 → "JmViewer/Comics/123"
      * 只处理 primary 存储（/storage/emulated/0/）
      */
     private String toRelativeStoragePath(String absolutePath) {
         String primary = Environment.getExternalStorageDirectory().getAbsolutePath();
         if (absolutePath.startsWith(primary)) {
             String rel = absolutePath.substring(primary.length());
-            // 去掉开头的 /
             if (rel.startsWith("/")) rel = rel.substring(1);
             return rel;
         }

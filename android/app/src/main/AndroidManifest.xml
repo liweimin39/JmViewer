@@ -3,19 +3,51 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- ★ 存储权限（分版本适配） -->
-    <!-- Android 9 及以下 -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29" />
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
-    <!-- Android 11+ 的"所有文件访问权限" -->
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- ★★★ 新增：包可见性声明（Android 11+） ★★★ -->
+    <queries>
+        <!-- MT 管理器（包名） -->
+        <package android:name="bin.mt.plus" />
+
+        <!-- MT 管理器的自定义 Action -->
+        <intent>
+            <action android:name="bin.mt.plus.ACTION_SHORTCUT" />
+        </intent>
+
+        <!-- 系统文件管理器（打开文件夹） -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="vnd.android.document/directory" />
+        </intent>
+
+        <!-- 文件夹选择器 -->
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT_TREE" />
+        </intent>
+
+        <!-- 通用文件选择 -->
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="*/*" />
+        </intent>
+
+        <!-- 分享（用于日志导出等） -->
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="*/*" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="true"
