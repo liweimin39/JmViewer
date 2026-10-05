@@ -10,14 +10,11 @@ const RETRY_DELAY_MS = 2000
 const NOTIFY_THROTTLE_MS = 200
 const SAVE_THROTTLE_MS = 2000
 
-/** 内部控制信号（不会被当成普通错误处理） */
 const SIGNAL_CANCEL = '__CANCEL__'
 const SIGNAL_PAUSE = '__PAUSE__'
 
-/** ZIP Blob 内存缓存（不写入持久化数据，避免序列化问题） */
 const zipBlobCache = new Map()
 
-/** 下载任务状态枚举 */
 export const DownloadStatus = {
   PENDING: 'pending',
   DOWNLOADING: 'downloading',
@@ -45,13 +42,36 @@ class DownloadManager {
 
     try {
       const saved = await offlineStorage.loadTasks()
-      this.tasks = saved.map((t) => ({
-        ...t,
-        status:
-          t.status === DownloadStatus.DOWNLOADING || t.status === DownloadStatus.PACKAGING
-            ? DownloadStatus.PAUSED
-            : t.status,
-      }))
+
+      this.tasks = saved.map((t) => {
+        // ★ 恢复时检查 _chapters 是否还在
+        const hasChapters = Array.isArray(t._chapters) && t._chapters.length > 0
+
+        // 未完成但章节数据丢失 → 标记失败，让用户重新下载
+        if (
+          !hasChapters &&
+          (t.status === DownloadStatus.DOWNLOADING ||
+            t.status === DownloadStatus.PACKAGING ||
+            t.status === DownloadStatus.PENDING ||
+            t.status === DownloadStatus.PAUSED)
+        ) {
+          return {
+            ...t,
+            status: DownloadStatus.FAILED,
+            message: '数据丢失，请删除后重新下载',
+            error: '章节数据丢失',
+          }
+        }
+
+        return {
+          ...t,
+          status:
+            t.status === DownloadStatus.DOWNLOADING || t.status === DownloadStatus.PACKAGING
+              ? DownloadStatus.PAUSED
+              : t.status,
+        }
+      })
+
       logger.info('[Download] 已加载', this.tasks.length, '个任务')
     } catch (e) {
       logger.warn('[Download] 加载任务失败:', e)
@@ -122,9 +142,13 @@ class DownloadManager {
     }
   }
 
+  /**
+   * ★ 关键修复：保留 _chapters（否则重启后无法恢复下载）
+   * 只剥离不能序列化的 _zipBlob
+   */
   _cleanTasksForSave() {
     return this.tasks.map((t) => {
-      const { _zipBlob, _chapters, ...rest } = t
+      const { _zipBlob, ...rest } = t
       return rest
     })
   }
@@ -151,7 +175,6 @@ class DownloadManager {
       totalImages: chapters.reduce((sum, c) => sum + (c.images?.length || 0), 0),
       downloadedImages: 0,
       status: DownloadStatus.PENDING,
-      progress: 0,
       message: '等待下载',
       error: null,
       retries: 0,
@@ -165,7 +188,7 @@ class DownloadManager {
       currentChapterName: '',
       currentChapterImageIndex: 0,
       currentChapterImageTotal: 0,
-      _chapters: chapters,
+      _chapters: chapters, // ★ 会被持久化
     }
 
     this.tasks.unshift(task)
@@ -190,19 +213,24 @@ class DownloadManager {
     this.running.add(task.id)
 
     try {
+      const chapters = task._chapters || []
+
+      // ★ 关键检查：chapters 为空 → 立即失败
+      if (chapters.length === 0) {
+        throw new Error('章节数据丢失，请删除任务后重新下载')
+      }
+
       task.status = DownloadStatus.DOWNLOADING
       task.message = '准备下载...'
       task.downloadedImages = 0
       task.error = null
       task.currentChapterIndex = 0
-      task.totalChapters = (task._chapters || []).length
+      task.totalChapters = chapters.length
       task.currentChapterName = ''
       task.currentChapterImageIndex = 0
       task.currentChapterImageTotal = 0
       this._notifyImmediate()
       await this._saveImmediate()
-
-      const chapters = task._chapters || []
 
       for (let ci = 0; ci < chapters.length; ci++) {
         if (task.status === DownloadStatus.CANCELLED) throw new Error(SIGNAL_CANCEL)
@@ -309,11 +337,6 @@ class DownloadManager {
     task.message = `第 ${task.currentChapterIndex}/${totalChapters} 章 · ${task.currentChapterName}`
     this._notifyImmediate()
 
-    const headers = {
-      ...(jmApi.accessToken?.token ? { token: jmApi.accessToken.token } : {}),
-      ...(jmApi.accessToken?.tokenParam ? { tokenParam: jmApi.accessToken.tokenParam } : {}),
-    }
-
     for (let i = 0; i < images.length; i++) {
       if (task.status === DownloadStatus.CANCELLED) throw new Error(SIGNAL_CANCEL)
       if (task.status === DownloadStatus.PAUSED) throw new Error(SIGNAL_PAUSE)
@@ -324,11 +347,11 @@ class DownloadManager {
 
       task.currentChapterImageIndex = i + 1
 
-      // 断点续传
+      // 断点续传（> 100 字节才算有效）
       const fileExists = await offlineStorage.exists(imagePath)
       if (fileExists) {
         const size = await offlineStorage.getSize(imagePath)
-        if (size > 0) {
+        if (size > 100) {
           task.downloadedImages++
           const total = task.totalImages || 1
           task.progress = Math.round((task.downloadedImages / total) * 90)
@@ -339,30 +362,24 @@ class DownloadManager {
 
       // 下载
       try {
-        if (Capacitor.isNativePlatform()) {
-          const { FileTransfer } = await import('@capacitor/file-transfer')
-          const { Directory } = await import('@capacitor/filesystem')
-          // ★ 用相对路径 + directory，不要用完整 URI
-          await FileTransfer.downloadFile({
-            url: imageUrl,
-            path: imagePath,
-            directory: Directory.Documents,
-            progress: false,
-            headers,
-          })
-        } else {
-          const res = await fetch(imageUrl, { headers })
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          const blob = await res.blob()
-          const base64 = await blobToBase64(blob)
-          const { Filesystem, Directory } = await import('@capacitor/filesystem')
-          await Filesystem.writeFile({
-            path: imagePath,
-            data: base64.split(',')[1],
-            directory: Directory.Documents,
-            recursive: true,
-          })
+        // ★ 统一用 fetch + Filesystem.writeFile，移除 FileTransfer 依赖
+        const res = await fetch(imageUrl)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+        const buffer = await res.arrayBuffer()
+        if (!buffer || buffer.byteLength === 0) {
+          throw new Error('响应为空')
         }
+
+        const base64 = arrayBufferToBase64(buffer)
+
+        const { Filesystem, Directory } = await import('@capacitor/filesystem')
+        await Filesystem.writeFile({
+          path: imagePath,
+          data: base64,
+          directory: Directory.Documents,
+          recursive: true,
+        })
 
         task.downloadedImages++
         const total = task.totalImages || 1
@@ -375,7 +392,6 @@ class DownloadManager {
           url: imageUrl,
           path: imagePath,
           error: e?.message,
-          stack: e?.stack,
         })
         throw new Error(`图片下载失败: ${imageName}`)
       }
@@ -401,6 +417,11 @@ class DownloadManager {
     const task = this.tasks.find((t) => t.id === taskId)
     if (!task) return
     if (task.status === DownloadStatus.PAUSED || task.status === DownloadStatus.FAILED) {
+      // ★ 检查 _chapters 是否还在
+      if (!Array.isArray(task._chapters) || task._chapters.length === 0) {
+        throw new Error('章节数据丢失，请删除任务后重新下载')
+      }
+
       task.status = DownloadStatus.PENDING
       task.message = '等待下载'
       task.error = null
@@ -450,7 +471,6 @@ class DownloadManager {
     if (!task) throw new Error('任务不存在')
     if (task.status !== DownloadStatus.COMPLETED) throw new Error('任务尚未完成')
 
-    // ★ 原生平台：分享
     if (Capacitor.isNativePlatform()) {
       const { Filesystem, Directory } = await import('@capacitor/filesystem')
       const { Share } = await import('@capacitor/share')
@@ -468,7 +488,6 @@ class DownloadManager {
       return { type: 'share' }
     }
 
-    // Web：优先内存缓存
     let blob = zipBlobCache.get(taskId)
 
     if (!blob) {
@@ -535,7 +554,7 @@ class DownloadManager {
   }
 }
 
-/** 保存 ZIP 到磁盘（统一去掉 data: 前缀） */
+/** 保存 ZIP 到磁盘 */
 async function saveZipToDisk(zipPath, blob) {
   const { Filesystem, Directory } = await import('@capacitor/filesystem')
 
@@ -550,7 +569,7 @@ async function saveZipToDisk(zipPath, blob) {
   })
 }
 
-/** Blob 转 base64（带 data: 前缀） */
+/** Blob 转 base64 */
 function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -558,6 +577,18 @@ function blobToBase64(blob) {
     reader.onerror = reject
     reader.readAsDataURL(blob)
   })
+}
+
+/** ★ 大文件安全的 ArrayBuffer → base64 */
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer)
+  const chunkSize = 0x8000 // 32KB 分块，避免 btoa 栈溢出
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize)
+    binary += String.fromCharCode.apply(null, chunk)
+  }
+  return btoa(binary)
 }
 
 /** base64 转 Blob */
