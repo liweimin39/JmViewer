@@ -2,27 +2,34 @@ import JSZip from 'jszip'
 import { offlineStorage } from './offlineStorage.js'
 
 /**
+ * 生成磁盘上存储的文件名（和 downloadManager 里一致）
+ */
+function getStoredImageName(originalName, albumId) {
+  const id = Number(albumId)
+  const needDecrypt = id >= 220980 && !originalName.endsWith('.gif')
+  if (needDecrypt) {
+    return originalName.replace(/\.[^.]+$/, '.png')
+  }
+  return originalName
+}
+
+/**
  * 将下载好的章节图片打包为 ZIP
- * @param {Object} album 漫画信息 { id, name, author }
- * @param {Array} chapters 章节数组 [{ id, name, images: [] }]
- * @param {Function} onProgress 进度回调 (percent, message)
- * @returns {Promise<Blob>} ZIP Blob
  */
 export async function zipChapters(album, chapters, onProgress) {
   const zip = new JSZip()
 
-  // 漫画根目录
   const rootFolder = zip.folder(sanitizeName(album.name || `album_${album.id}`))
 
   let totalImages = 0
   let processedImages = 0
+  let successImages = 0
+  const failedImages = []
 
-  // 统计总图片数
   for (const ch of chapters) {
     totalImages += (ch.images || []).length
   }
 
-  // 按章节顺序添加
   for (let i = 0; i < chapters.length; i++) {
     const chapter = chapters[i]
     const chapterNum = i + 1
@@ -30,29 +37,36 @@ export async function zipChapters(album, chapters, onProgress) {
     const chapterFolder = rootFolder.folder(chapterName)
 
     for (let j = 0; j < chapter.images.length; j++) {
-      const imageName = chapter.images[j]
-      const imagePath = `${offlineStorage.albumDir(album.id)}/chapters/${chapter.id}/${imageName}`
+      const originalName = chapter.images[j]
+      // ★ 使用和下载时一致的存储文件名
+      const storedName = getStoredImageName(originalName, album.id)
+      const imagePath = `${offlineStorage.albumDir(album.id)}/chapters/${chapter.id}/${storedName}`
 
       try {
-        // 从文件系统读取图片
-        const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem')
+        const { Filesystem, Directory } = await import('@capacitor/filesystem')
         const result = await Filesystem.readFile({
           path: imagePath,
           directory: Directory.Documents,
         })
 
-        // 原生平台返回 base64，Web 平台直接是 base64
         let base64Data = result.data
         if (typeof base64Data !== 'string') {
-          base64Data = base64Data.toString('base64')
+          base64Data = String(base64Data)
         }
 
-        // 去掉 base64 前缀
-        const base64Clean = base64Data.replace(/^data:image\/\w+;base64,/, '')
+        const base64Clean = base64Data.replace(/^data:[^;]+;base64,/, '')
 
-        chapterFolder.file(imageName, base64Clean, { base64: true })
+        if (!base64Clean || base64Clean.length < 100) {
+          console.warn(`[ZIP] 图片数据无效: ${imagePath} (长度 ${base64Clean.length})`)
+          failedImages.push(imagePath)
+        } else {
+          // ★ ZIP 里用原始名（用户看起来正常），数据用解密后的
+          chapterFolder.file(originalName, base64Clean, { base64: true })
+          successImages++
+        }
       } catch (e) {
         console.warn(`[ZIP] 读取图片失败: ${imagePath}`, e)
+        failedImages.push(imagePath)
       }
 
       processedImages++
@@ -65,7 +79,16 @@ export async function zipChapters(album, chapters, onProgress) {
     }
   }
 
-  // 生成 ZIP
+  if (successImages === 0) {
+    throw new Error(
+      `打包失败：${failedImages.length} 张图片全部读取失败。` + `请检查图片是否真的下载成功`,
+    )
+  }
+
+  if (failedImages.length > 0) {
+    console.warn(`[ZIP] ${failedImages.length} 张图片读取失败，已跳过`)
+  }
+
   if (onProgress) onProgress(95, '正在压缩...')
 
   const blob = await zip.generateAsync(
@@ -84,7 +107,6 @@ export async function zipChapters(album, chapters, onProgress) {
   return blob
 }
 
-/** 清理文件名中的非法字符 */
 function sanitizeName(name) {
   return (name || 'unknown')
     .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
@@ -93,7 +115,6 @@ function sanitizeName(name) {
     .slice(0, 100)
 }
 
-/** 获取 ZIP 文件名 */
 export function getZipFileName(album) {
   const date = new Date()
   const pad = (n) => String(n).padStart(2, '0')

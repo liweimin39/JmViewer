@@ -3,6 +3,7 @@ import { jmApi } from '@/api/JmcomicApi.js'
 import { offlineStorage } from './offlineStorage.js'
 import { zipChapters, getZipFileName } from './zipHelper.js'
 import { logger } from './logger.js'
+import { ImageCutter } from '@/components/chapter/ImageCutter.js'
 
 const MAX_CONCURRENT = 2
 const MAX_RETRIES = 3
@@ -15,6 +16,9 @@ const SIGNAL_PAUSE = '__PAUSE__'
 
 const zipBlobCache = new Map()
 
+// ★ 单例 ImageCutter
+const imageCutter = new ImageCutter()
+
 export const DownloadStatus = {
   PENDING: 'pending',
   DOWNLOADING: 'downloading',
@@ -23,6 +27,27 @@ export const DownloadStatus = {
   FAILED: 'failed',
   PAUSED: 'paused',
   CANCELLED: 'cancelled',
+}
+
+/**
+ * ★ 判断某张图是否需要解密
+ * 和 ComicImageLoader 里逻辑一致
+ */
+function needsDecrypt(albumId, imageName) {
+  const id = Number(albumId)
+  return id >= 220980 && !imageName.endsWith('.gif')
+}
+
+/**
+ * ★ 生成磁盘上存储的文件名
+ * 需要解密的图，扩展名改成 .png（因为解密后是 PNG 数据）
+ * 不需要解密的图，保持原名
+ */
+function getStoredImageName(originalName, albumId) {
+  if (needsDecrypt(albumId, originalName)) {
+    return originalName.replace(/\.[^.]+$/, '.png')
+  }
+  return originalName
 }
 
 class DownloadManager {
@@ -44,10 +69,8 @@ class DownloadManager {
       const saved = await offlineStorage.loadTasks()
 
       this.tasks = saved.map((t) => {
-        // ★ 恢复时检查 _chapters 是否还在
         const hasChapters = Array.isArray(t._chapters) && t._chapters.length > 0
 
-        // 未完成但章节数据丢失 → 标记失败，让用户重新下载
         if (
           !hasChapters &&
           (t.status === DownloadStatus.DOWNLOADING ||
@@ -142,10 +165,6 @@ class DownloadManager {
     }
   }
 
-  /**
-   * ★ 关键修复：保留 _chapters（否则重启后无法恢复下载）
-   * 只剥离不能序列化的 _zipBlob
-   */
   _cleanTasksForSave() {
     return this.tasks.map((t) => {
       const { _zipBlob, ...rest } = t
@@ -188,7 +207,7 @@ class DownloadManager {
       currentChapterName: '',
       currentChapterImageIndex: 0,
       currentChapterImageTotal: 0,
-      _chapters: chapters, // ★ 会被持久化
+      _chapters: chapters,
     }
 
     this.tasks.unshift(task)
@@ -215,7 +234,6 @@ class DownloadManager {
     try {
       const chapters = task._chapters || []
 
-      // ★ 关键检查：chapters 为空 → 立即失败
       if (chapters.length === 0) {
         throw new Error('章节数据丢失，请删除任务后重新下载')
       }
@@ -341,9 +359,10 @@ class DownloadManager {
       if (task.status === DownloadStatus.CANCELLED) throw new Error(SIGNAL_CANCEL)
       if (task.status === DownloadStatus.PAUSED) throw new Error(SIGNAL_PAUSE)
 
-      const imageName = images[i]
-      const imagePath = `${chapterDir}/${imageName}`
-      const imageUrl = jmApi.getChapterImageURL(chapterId, imageName)
+      const originalName = images[i]
+      const storedName = getStoredImageName(originalName, albumId)
+      const imagePath = `${chapterDir}/${storedName}`
+      const imageUrl = jmApi.getChapterImageURL(chapterId, originalName)
 
       task.currentChapterImageIndex = i + 1
 
@@ -360,9 +379,8 @@ class DownloadManager {
         }
       }
 
-      // 下载
+      // 下载 + 解密
       try {
-        // ★ 统一用 fetch + Filesystem.writeFile，移除 FileTransfer 依赖
         const res = await fetch(imageUrl)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
@@ -371,12 +389,34 @@ class DownloadManager {
           throw new Error('响应为空')
         }
 
-        const base64 = arrayBufferToBase64(buffer)
+        const rawBlob = new Blob([buffer])
+
+        let finalBase64
+
+        if (needsDecrypt(albumId, originalName)) {
+          // ★ 解密流程
+          try {
+            const img = await blobToImage(rawBlob)
+            const canvas = imageCutter.cutImage(img, albumId, originalName)
+            const dataUrl = canvas.toDataURL('image/png')
+            finalBase64 = dataUrl.split(',')[1]
+          } catch (err) {
+            logger.warn(`[Download] 解密失败，保存原图: ${originalName}`, err)
+            finalBase64 = arrayBufferToBase64(buffer)
+          }
+        } else {
+          // 不需要解密
+          finalBase64 = arrayBufferToBase64(buffer)
+        }
+
+        if (!finalBase64 || finalBase64.length < 100) {
+          throw new Error('图片数据无效')
+        }
 
         const { Filesystem, Directory } = await import('@capacitor/filesystem')
         await Filesystem.writeFile({
           path: imagePath,
-          data: base64,
+          data: finalBase64,
           directory: Directory.Documents,
           recursive: true,
         })
@@ -388,12 +428,12 @@ class DownloadManager {
       } catch (e) {
         if (e.message === SIGNAL_CANCEL || e.message === SIGNAL_PAUSE) throw e
 
-        logger.error(`[Download] 图片下载失败: ${imageName}`, {
+        logger.error(`[Download] 图片下载失败: ${originalName}`, {
           url: imageUrl,
           path: imagePath,
           error: e?.message,
         })
-        throw new Error(`图片下载失败: ${imageName}`)
+        throw new Error(`图片下载失败: ${originalName}`)
       }
     }
 
@@ -417,7 +457,6 @@ class DownloadManager {
     const task = this.tasks.find((t) => t.id === taskId)
     if (!task) return
     if (task.status === DownloadStatus.PAUSED || task.status === DownloadStatus.FAILED) {
-      // ★ 检查 _chapters 是否还在
       if (!Array.isArray(task._chapters) || task._chapters.length === 0) {
         throw new Error('章节数据丢失，请删除任务后重新下载')
       }
@@ -569,7 +608,7 @@ async function saveZipToDisk(zipPath, blob) {
   })
 }
 
-/** Blob 转 base64 */
+/** Blob 转 base64（带 data: 前缀） */
 function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -579,10 +618,28 @@ function blobToBase64(blob) {
   })
 }
 
-/** ★ 大文件安全的 ArrayBuffer → base64 */
+/** Blob 转 Image 对象 */
+function blobToImage(blob) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob)
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      resolve(img)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('图片加载失败'))
+    }
+    img.src = url
+  })
+}
+
+/** ArrayBuffer 转 base64（分块，避免大图栈溢出） */
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer)
-  const chunkSize = 0x8000 // 32KB 分块，避免 btoa 栈溢出
+  const chunkSize = 0x8000
   let binary = ''
   for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.subarray(i, i + chunkSize)
