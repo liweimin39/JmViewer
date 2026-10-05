@@ -16,3 +16,6 @@ project(':capacitor-share').projectDir = new File('../node_modules/@capacitor/sh
 
 include ':capgo-capacitor-downloader'
 project(':capgo-capacitor-downloader').projectDir = new File('../node_modules/@capgo/capacitor-downloader/android')
+
+include ':capacitor-native-settings'
+project(':capacitor-native-settings').projectDir = new File('../node_modules/capacitor-native-settings/android')

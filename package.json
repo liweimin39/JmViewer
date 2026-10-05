@@ -22,6 +22,7 @@
     "@capacitor/ios": "^8.5.2",
     "@capacitor/share": "^8.0.2",
     "@capgo/capacitor-downloader": "^8.3.7",
+    "capacitor-native-settings": "^8.2.0",
     "core-js": "^3.50.0",
     "crypto-js": "^4.2.0",
     "file-saver": "^2.0.5",

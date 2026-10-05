@@ -16,7 +16,8 @@ let package = Package(
         .package(name: "CapacitorFileTransfer", path: "../../../node_modules/@capacitor/file-transfer"),
         .package(name: "CapacitorFilesystem", path: "../../../node_modules/@capacitor/filesystem"),
         .package(name: "CapacitorShare", path: "../../../node_modules/@capacitor/share"),
-        .package(name: "CapgoCapacitorDownloader", path: "../../../node_modules/@capgo/capacitor-downloader")
+        .package(name: "CapgoCapacitorDownloader", path: "../../../node_modules/@capgo/capacitor-downloader"),
+        .package(name: "CapacitorNativeSettings", path: "../../../node_modules/capacitor-native-settings")
     ],
     targets: [
         .target(
@@ -28,7 +29,8 @@ let package = Package(
                 .product(name: "CapacitorFileTransfer", package: "CapacitorFileTransfer"),
                 .product(name: "CapacitorFilesystem", package: "CapacitorFilesystem"),
                 .product(name: "CapacitorShare", package: "CapacitorShare"),
-                .product(name: "CapgoCapacitorDownloader", package: "CapgoCapacitorDownloader")
+                .product(name: "CapgoCapacitorDownloader", package: "CapgoCapacitorDownloader"),
+                .product(name: "CapacitorNativeSettings", package: "CapacitorNativeSettings")
             ]
         )
     ]

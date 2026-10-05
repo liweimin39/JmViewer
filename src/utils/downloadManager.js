@@ -15,8 +15,6 @@ const SIGNAL_CANCEL = '__CANCEL__'
 const SIGNAL_PAUSE = '__PAUSE__'
 
 const zipBlobCache = new Map()
-
-// ★ 单例 ImageCutter
 const imageCutter = new ImageCutter()
 
 export const DownloadStatus = {
@@ -29,21 +27,14 @@ export const DownloadStatus = {
   CANCELLED: 'cancelled',
 }
 
-/**
- * ★ 判断某张图是否需要解密
- * 和 ComicImageLoader 里逻辑一致
- */
+/** 判断是否需要解密 */
 function needsDecrypt(albumId, imageName) {
   const id = Number(albumId)
   return id >= 220980 && !imageName.endsWith('.gif')
 }
 
-/**
- * ★ 生成磁盘上存储的文件名
- * 需要解密的图，扩展名改成 .png（因为解密后是 PNG 数据）
- * 不需要解密的图，保持原名
- */
-function getStoredImageName(originalName, albumId) {
+/** 生成解密后的文件名（扩展名换成 .png） */
+function getDecodedName(originalName, albumId) {
   if (needsDecrypt(albumId, originalName)) {
     return originalName.replace(/\.[^.]+$/, '.png')
   }
@@ -66,6 +57,13 @@ class DownloadManager {
     this._initialized = true
 
     try {
+      // 1. 初始化目录
+      await offlineStorage.initDirs()
+
+      // 2. 清空 Tmp
+      await offlineStorage.clearTmp()
+
+      // 3. 加载任务
       const saved = await offlineStorage.loadTasks()
 
       this.tasks = saved.map((t) => {
@@ -97,7 +95,7 @@ class DownloadManager {
 
       logger.info('[Download] 已加载', this.tasks.length, '个任务')
     } catch (e) {
-      logger.warn('[Download] 加载任务失败:', e)
+      logger.warn('[Download] 初始化失败:', e)
       this.tasks = []
     }
 
@@ -275,9 +273,9 @@ class DownloadManager {
 
       zipBlobCache.set(task.id, blob)
 
+      // ★ ZIP 自动保存到 DownloadComics
       const zipFileName = getZipFileName({ name: task.albumName })
-      const zipPath = `${offlineStorage.ROOT_DIR}/${zipFileName}`
-      await offlineStorage.ensureDir(offlineStorage.ROOT_DIR)
+      const zipPath = offlineStorage.zipFilePath(zipFileName)
 
       task.status = DownloadStatus.COMPLETED
       task.progress = 100
@@ -287,11 +285,9 @@ class DownloadManager {
       task.fileSize = blob.size
       task.completedAt = new Date().toISOString()
 
-      saveZipToDisk(zipPath, blob).catch((e) => {
-        logger.warn('[Download] ZIP 持久化失败（内存仍可用）:', e)
-      })
+      await saveZipToDisk(zipPath, blob)
 
-      logger.info('[Download] 任务完成:', task.id, task.albumName)
+      logger.info('[Download] 任务完成:', task.id, task.albumName, '→', zipFileName)
     } catch (e) {
       if (e.message === SIGNAL_CANCEL) {
         task.status = DownloadStatus.CANCELLED
@@ -344,8 +340,11 @@ class DownloadManager {
     const chapterId = chapter.id
     const images = chapter.images || []
 
-    const chapterDir = `${offlineStorage.albumDir(albumId)}/chapters/${chapterId}`
-    await offlineStorage.ensureDir(chapterDir)
+    const rawDir = offlineStorage.rawChapterPath(albumId, chapterId)
+    const decodedDir = offlineStorage.decodedChapterPath(albumId, chapterId)
+
+    await offlineStorage.ensureDir(rawDir)
+    await offlineStorage.ensureDir(decodedDir)
 
     task.currentChapterIndex = chapterIndex + 1
     task.totalChapters = totalChapters
@@ -360,16 +359,17 @@ class DownloadManager {
       if (task.status === DownloadStatus.PAUSED) throw new Error(SIGNAL_PAUSE)
 
       const originalName = images[i]
-      const storedName = getStoredImageName(originalName, albumId)
-      const imagePath = `${chapterDir}/${storedName}`
+      const decodedName = getDecodedName(originalName, albumId)
+      const rawPath = `${rawDir}/${originalName}`
+      const decodedPath = `${decodedDir}/${decodedName}`
       const imageUrl = jmApi.getChapterImageURL(chapterId, originalName)
 
       task.currentChapterImageIndex = i + 1
 
-      // 断点续传（> 100 字节才算有效）
-      const fileExists = await offlineStorage.exists(imagePath)
-      if (fileExists) {
-        const size = await offlineStorage.getSize(imagePath)
+      // 断点续传：检查解密后的文件
+      const decodedExists = await offlineStorage.exists(decodedPath)
+      if (decodedExists) {
+        const size = await offlineStorage.getSize(decodedPath)
         if (size > 100) {
           task.downloadedImages++
           const total = task.totalImages || 1
@@ -379,8 +379,8 @@ class DownloadManager {
         }
       }
 
-      // 下载 + 解密
       try {
+        // 1. 下载原图
         const res = await fetch(imageUrl)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
@@ -389,37 +389,34 @@ class DownloadManager {
           throw new Error('响应为空')
         }
 
-        const rawBlob = new Blob([buffer])
+        const rawBase64 = arrayBufferToBase64(buffer)
 
-        let finalBase64
+        // 2. 保存原图到 ComicImages
+        await offlineStorage.writeBase64(rawPath, rawBase64)
 
+        // 3. 解密
+        let decodedBase64
         if (needsDecrypt(albumId, originalName)) {
-          // ★ 解密流程
           try {
-            const img = await blobToImage(rawBlob)
+            const blob = new Blob([buffer])
+            const img = await blobToImage(blob)
             const canvas = imageCutter.cutImage(img, albumId, originalName)
             const dataUrl = canvas.toDataURL('image/png')
-            finalBase64 = dataUrl.split(',')[1]
+            decodedBase64 = dataUrl.split(',')[1]
           } catch (err) {
-            logger.warn(`[Download] 解密失败，保存原图: ${originalName}`, err)
-            finalBase64 = arrayBufferToBase64(buffer)
+            logger.warn(`[Download] 解密失败，使用原图: ${originalName}`, err)
+            decodedBase64 = rawBase64
           }
         } else {
-          // 不需要解密
-          finalBase64 = arrayBufferToBase64(buffer)
+          decodedBase64 = rawBase64
         }
 
-        if (!finalBase64 || finalBase64.length < 100) {
+        if (!decodedBase64 || decodedBase64.length < 100) {
           throw new Error('图片数据无效')
         }
 
-        const { Filesystem, Directory } = await import('@capacitor/filesystem')
-        await Filesystem.writeFile({
-          path: imagePath,
-          data: finalBase64,
-          directory: Directory.Documents,
-          recursive: true,
-        })
+        // 4. 保存解密图到 DecodedComicImages
+        await offlineStorage.writeBase64(decodedPath, decodedBase64)
 
         task.downloadedImages++
         const total = task.totalImages || 1
@@ -430,7 +427,6 @@ class DownloadManager {
 
         logger.error(`[Download] 图片下载失败: ${originalName}`, {
           url: imageUrl,
-          path: imagePath,
           error: e?.message,
         })
         throw new Error(`图片下载失败: ${originalName}`)
@@ -460,7 +456,6 @@ class DownloadManager {
       if (!Array.isArray(task._chapters) || task._chapters.length === 0) {
         throw new Error('章节数据丢失，请删除任务后重新下载')
       }
-
       task.status = DownloadStatus.PENDING
       task.message = '等待下载'
       task.error = null
@@ -488,12 +483,11 @@ class DownloadManager {
     if (idx === -1) return
 
     const task = this.tasks[idx]
-
     zipBlobCache.delete(taskId)
 
     if (task.albumId) {
-      const albumDir = offlineStorage.albumDir(task.albumId)
-      await offlineStorage.remove(albumDir)
+      await offlineStorage.remove(offlineStorage.rawAlbumPath(task.albumId))
+      await offlineStorage.remove(offlineStorage.decodedAlbumPath(task.albumId))
     }
     if (task.zipPath) {
       await offlineStorage.remove(task.zipPath)
@@ -505,54 +499,38 @@ class DownloadManager {
     await this._saveImmediate()
   }
 
+  /** 下载/导出 ZIP */
   async downloadZip(taskId) {
     const task = this.tasks.find((t) => t.id === taskId)
     if (!task) throw new Error('任务不存在')
     if (task.status !== DownloadStatus.COMPLETED) throw new Error('任务尚未完成')
 
     if (Capacitor.isNativePlatform()) {
-      const { Filesystem, Directory } = await import('@capacitor/filesystem')
+      // 原生：文件已在 DownloadComics，弹分享面板
       const { Share } = await import('@capacitor/share')
-
-      const uriResult = await Filesystem.getUri({
-        path: task.zipPath,
-        directory: Directory.Documents,
-      })
+      const uri = await offlineStorage.getUri(task.zipPath)
 
       await Share.share({
         title: task.albumName,
-        url: uriResult.uri,
+        url: uri,
         dialogTitle: '保存或分享',
       })
       return { type: 'share' }
     }
 
+    // Web：浏览器下载
     let blob = zipBlobCache.get(taskId)
-
     if (!blob) {
-      try {
-        const { Filesystem, Directory } = await import('@capacitor/filesystem')
-        const result = await Filesystem.readFile({
-          path: task.zipPath,
-          directory: Directory.Documents,
-        })
-
-        let base64 = result.data
-        if (typeof base64 !== 'string') base64 = String(base64)
-        base64 = base64.trim()
-        if (base64.startsWith('data:')) base64 = base64.split(',')[1]
-
-        if (base64) {
-          blob = base64ToBlob(base64, 'application/zip')
-          zipBlobCache.set(taskId, blob)
-        }
-      } catch (e) {
-        logger.warn('[Download] 从磁盘读取 ZIP 失败:', e)
+      const base64 = await offlineStorage.readBase64(task.zipPath)
+      if (base64) {
+        const clean = base64.replace(/^data:[^;]+;base64,/, '')
+        blob = base64ToBlob(clean, 'application/zip')
+        zipBlobCache.set(taskId, blob)
       }
     }
 
     if (!(blob instanceof Blob) || blob.size === 0) {
-      throw new Error('ZIP 文件无效或已丢失，请删除后重新下载')
+      throw new Error('ZIP 文件无效')
     }
 
     const url = URL.createObjectURL(blob)
@@ -595,20 +573,11 @@ class DownloadManager {
 
 /** 保存 ZIP 到磁盘 */
 async function saveZipToDisk(zipPath, blob) {
-  const { Filesystem, Directory } = await import('@capacitor/filesystem')
-
   const dataUrl = await blobToBase64(blob)
   const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
-
-  await Filesystem.writeFile({
-    path: zipPath,
-    data: base64,
-    directory: Directory.Documents,
-    recursive: true,
-  })
+  await offlineStorage.writeBase64(zipPath, base64)
 }
 
-/** Blob 转 base64（带 data: 前缀） */
 function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -618,7 +587,6 @@ function blobToBase64(blob) {
   })
 }
 
-/** Blob 转 Image 对象 */
 function blobToImage(blob) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob)
@@ -636,7 +604,6 @@ function blobToImage(blob) {
   })
 }
 
-/** ArrayBuffer 转 base64（分块，避免大图栈溢出） */
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer)
   const chunkSize = 0x8000
@@ -648,7 +615,6 @@ function arrayBufferToBase64(buffer) {
   return btoa(binary)
 }
 
-/** base64 转 Blob */
 function base64ToBlob(base64, mimeType = 'application/octet-stream') {
   const byteChars = atob(base64)
   const byteNumbers = new Array(byteChars.length)
