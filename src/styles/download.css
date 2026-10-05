@@ -687,3 +687,135 @@
   color: #28a745;
   font-size: 12px;
 }
+
+/* ============ 权限引导 ============ */
+.perm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 9999;
+}
+
+.perm-panel {
+  width: 100%;
+  max-width: 380px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 24px 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.perm-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.perm-panel h2 {
+  margin: 0 0 12px;
+  font-size: 19px;
+  font-weight: 600;
+  color: #333;
+}
+
+.perm-desc {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+  margin: 0 0 16px;
+  text-align: left;
+}
+
+.perm-desc code {
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 12px;
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #ff7aa2;
+}
+
+.perm-steps {
+  background: #fff5f8;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  text-align: left;
+}
+
+.perm-steps-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ff7aa2;
+}
+
+.perm-steps ol {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.8;
+}
+
+.perm-steps ol li {
+  margin-bottom: 2px;
+}
+
+.perm-steps strong {
+  color: #333;
+}
+
+.perm-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.perm-btn {
+  flex: 1;
+  padding: 11px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.perm-btn.primary {
+  background: #ff7aa2;
+  color: #fff;
+}
+.perm-btn.primary:hover:not(:disabled) {
+  background: #ff5a88;
+}
+.perm-btn.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.perm-btn.secondary {
+  background: #f5f5f5;
+  color: #666;
+}
+.perm-btn.secondary:hover {
+  background: #eee;
+}
+
+.perm-recheck {
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: #ff7aa2;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.perm-recheck:hover {
+  color: #ff5a88;
+}

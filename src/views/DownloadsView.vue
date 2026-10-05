@@ -1,11 +1,18 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import { downloadManager, DownloadStatus } from '@/utils/downloadManager.js'
+import { useStoragePermission } from '@/composables/useStoragePermission.js'
 import DownloadItem from '@/components/download/DownloadItem.vue'
+import StoragePermissionGate from '@/components/download/StoragePermissionGate.vue'
 import '@/styles/download.css'
 
 const tasks = ref([])
-const activeTab = ref('all') // all | active | completed
+const activeTab = ref('all')
+const showPermGate = ref(false)
+
+const { granted, check: checkPerm, platform } = useStoragePermission()
+
 let unsubscribe = null
 
 const filteredTasks = computed(() => {
@@ -46,7 +53,22 @@ async function handleDownloadZip(taskId) {
   }
 }
 
+function onPermGranted() {
+  showPermGate.value = false
+  // 授权后初始化下载管理器（创建目录）
+  downloadManager.init().then(refresh)
+}
+
 onMounted(async () => {
+  // Android 先检测权限
+  if (platform.value === 'android') {
+    const ok = await checkPerm()
+    if (!ok) {
+      showPermGate.value = true
+      return
+    }
+  }
+
   await downloadManager.init()
   refresh()
   unsubscribe = downloadManager.addListener(refresh)
@@ -97,5 +119,11 @@ onBeforeUnmount(() => {
         @download="handleDownloadZip"
       />
     </div>
+
+    <StoragePermissionGate
+      v-if="showPermGate"
+      @granted="onPermGranted"
+      @cancel="showPermGate = false"
+    />
   </div>
 </template>
