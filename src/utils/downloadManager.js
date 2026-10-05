@@ -205,7 +205,6 @@ class DownloadManager {
       const chapters = task._chapters || []
 
       for (let ci = 0; ci < chapters.length; ci++) {
-        // ★ 检查中断信号
         if (task.status === DownloadStatus.CANCELLED) throw new Error(SIGNAL_CANCEL)
         if (task.status === DownloadStatus.PAUSED) throw new Error(SIGNAL_PAUSE)
         await this._downloadChapter(task, chapters[ci], ci, chapters.length)
@@ -248,7 +247,6 @@ class DownloadManager {
 
       logger.info('[Download] 任务完成:', task.id, task.albumName)
     } catch (e) {
-      // ★ 处理中断信号
       if (e.message === SIGNAL_CANCEL) {
         task.status = DownloadStatus.CANCELLED
         task.message = '已取消'
@@ -269,7 +267,6 @@ class DownloadManager {
         return
       }
 
-      // 真正的错误
       logger.error('[Download] 任务失败:', task.id, e)
 
       task.retries = (task.retries || 0) + 1
@@ -318,7 +315,6 @@ class DownloadManager {
     }
 
     for (let i = 0; i < images.length; i++) {
-      // ★ 检查中断信号
       if (task.status === DownloadStatus.CANCELLED) throw new Error(SIGNAL_CANCEL)
       if (task.status === DownloadStatus.PAUSED) throw new Error(SIGNAL_PAUSE)
 
@@ -328,6 +324,7 @@ class DownloadManager {
 
       task.currentChapterImageIndex = i + 1
 
+      // 断点续传
       const fileExists = await offlineStorage.exists(imagePath)
       if (fileExists) {
         const size = await offlineStorage.getSize(imagePath)
@@ -340,13 +337,16 @@ class DownloadManager {
         }
       }
 
+      // 下载
       try {
         if (Capacitor.isNativePlatform()) {
           const { FileTransfer } = await import('@capacitor/file-transfer')
-          const uri = await offlineStorage.getUri(imagePath)
+          const { Directory } = await import('@capacitor/filesystem')
+          // ★ 用相对路径 + directory，不要用完整 URI
           await FileTransfer.downloadFile({
             url: imageUrl,
-            path: uri,
+            path: imagePath,
+            directory: Directory.Documents,
             progress: false,
             headers,
           })
@@ -369,9 +369,14 @@ class DownloadManager {
         task.progress = Math.round((task.downloadedImages / total) * 90)
         this._notify()
       } catch (e) {
-        // 中断信号不当作图片下载失败
         if (e.message === SIGNAL_CANCEL || e.message === SIGNAL_PAUSE) throw e
-        logger.warn(`[Download] 图片下载失败: ${imageName}`, e)
+
+        logger.error(`[Download] 图片下载失败: ${imageName}`, {
+          url: imageUrl,
+          path: imagePath,
+          error: e?.message,
+          stack: e?.stack,
+        })
         throw new Error(`图片下载失败: ${imageName}`)
       }
     }
@@ -380,20 +385,18 @@ class DownloadManager {
     this._notifyImmediate()
   }
 
-  /** ★ 暂停任务：从 running 移除，让循环检测到 PAUSED 后退出 */
   async pause(taskId) {
     const task = this.tasks.find((t) => t.id === taskId)
     if (!task) return
     if (task.status === DownloadStatus.DOWNLOADING || task.status === DownloadStatus.PACKAGING) {
       task.status = DownloadStatus.PAUSED
       task.message = '已暂停'
-      this.running.delete(taskId) // ★ 关键：允许 resume 重新启动
+      this.running.delete(taskId)
       this._notifyImmediate()
       await this._saveImmediate()
     }
   }
 
-  /** 继续任务 */
   async resume(taskId) {
     const task = this.tasks.find((t) => t.id === taskId)
     if (!task) return
@@ -402,14 +405,13 @@ class DownloadManager {
       task.message = '等待下载'
       task.error = null
       task.retries = 0
-      this.running.delete(taskId) // ★ 保险：确保不在 running 里
+      this.running.delete(taskId)
       this._notifyImmediate()
       await this._saveImmediate()
       this._pump()
     }
   }
 
-  /** 取消任务 */
   async cancel(taskId) {
     const task = this.tasks.find((t) => t.id === taskId)
     if (!task) return
@@ -448,54 +450,42 @@ class DownloadManager {
     if (!task) throw new Error('任务不存在')
     if (task.status !== DownloadStatus.COMPLETED) throw new Error('任务尚未完成')
 
+    // ★ 原生平台：分享
     if (Capacitor.isNativePlatform()) {
       const { Filesystem, Directory } = await import('@capacitor/filesystem')
       const { Share } = await import('@capacitor/share')
 
-      const result = await Filesystem.getUri({
+      const uriResult = await Filesystem.getUri({
         path: task.zipPath,
         directory: Directory.Documents,
       })
 
       await Share.share({
         title: task.albumName,
-        url: result.uri,
+        url: uriResult.uri,
         dialogTitle: '保存或分享',
       })
       return { type: 'share' }
     }
 
+    // Web：优先内存缓存
     let blob = zipBlobCache.get(taskId)
 
     if (!blob) {
       try {
-        const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem')
+        const { Filesystem, Directory } = await import('@capacitor/filesystem')
         const result = await Filesystem.readFile({
           path: task.zipPath,
           directory: Directory.Documents,
-          encoding: Encoding.UTF8,
         })
 
-        let text = result.data
-        if (typeof text !== 'string') {
-          if (text instanceof Uint8Array) {
-            blob = new Blob([text], { type: 'application/zip' })
-          } else if (text instanceof Blob) {
-            blob = text
-          } else {
-            text = String(text)
-          }
-        }
+        let base64 = result.data
+        if (typeof base64 !== 'string') base64 = String(base64)
+        base64 = base64.trim()
+        if (base64.startsWith('data:')) base64 = base64.split(',')[1]
 
-        if (!blob && typeof text === 'string') {
-          let base64 = text.trim()
-          if (base64.startsWith('data:')) base64 = base64.split(',')[1]
-          if (base64) {
-            blob = base64ToBlob(base64, 'application/zip')
-          }
-        }
-
-        if (blob) {
+        if (base64) {
+          blob = base64ToBlob(base64, 'application/zip')
           zipBlobCache.set(taskId, blob)
         }
       } catch (e) {
@@ -530,12 +520,10 @@ class DownloadManager {
     await this._saveImmediate()
   }
 
-  /** 获取所有任务（返回新对象数组，确保 Vue 检测到引用变化） */
   getTasks() {
     return this.tasks.map((t) => ({ ...t }))
   }
 
-  /** 获取活动任务 */
   getActiveTasks() {
     return this.tasks
       .filter((t) =>
@@ -547,30 +535,22 @@ class DownloadManager {
   }
 }
 
-/** 保存 ZIP 到磁盘（区分原生/Web） */
+/** 保存 ZIP 到磁盘（统一去掉 data: 前缀） */
 async function saveZipToDisk(zipPath, blob) {
-  const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem')
+  const { Filesystem, Directory } = await import('@capacitor/filesystem')
 
-  if (Capacitor.isNativePlatform()) {
-    const base64 = await blobToBase64(blob)
-    await Filesystem.writeFile({
-      path: zipPath,
-      data: base64,
-      directory: Directory.Documents,
-      encoding: Encoding.UTF8,
-      recursive: true,
-    })
-  } else {
-    const base64 = await blobToBase64(blob)
-    await Filesystem.writeFile({
-      path: zipPath,
-      data: base64.split(',')[1] || base64,
-      directory: Directory.Documents,
-      recursive: true,
-    })
-  }
+  const dataUrl = await blobToBase64(blob)
+  const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
+
+  await Filesystem.writeFile({
+    path: zipPath,
+    data: base64,
+    directory: Directory.Documents,
+    recursive: true,
+  })
 }
 
+/** Blob 转 base64（带 data: 前缀） */
 function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -580,6 +560,7 @@ function blobToBase64(blob) {
   })
 }
 
+/** base64 转 Blob */
 function base64ToBlob(base64, mimeType = 'application/octet-stream') {
   const byteChars = atob(base64)
   const byteNumbers = new Array(byteChars.length)

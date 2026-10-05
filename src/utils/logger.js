@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core'
 const LOG_DIR = 'logs'
 const LOG_FILE = 'app.log'
 const MAX_MEMORY_LOGS = 500
-const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB，超过自动重置
+const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const SAVE_DEBOUNCE_MS = 3000
 
 const LEVELS = { debug: 0, info: 1, warn: 2, error: 3 }
@@ -11,15 +11,14 @@ const LEVEL_LABEL = { debug: 'DEBUG', info: 'INFO ', warn: 'WARN ', error: 'ERRO
 
 class Logger {
   constructor() {
-    this.logs = [] // 内存日志
-    this._lastSavedIndex = 0 // 已写入文件的索引
+    this.logs = []
+    this._lastSavedIndex = 0
     this._saveTimer = null
     this._initialized = false
     this._originalConsole = null
     this._saving = false
   }
 
-  /** 同步初始化：拦截 console 和全局错误（在模块加载时调用） */
   patch() {
     this._patchConsole()
     this._patchGlobalErrors()
@@ -32,7 +31,6 @@ class Logger {
     }
   }
 
-  /** 异步初始化：加载文件里的历史日志 */
   async init() {
     if (this._initialized) return
     this._initialized = true
@@ -55,11 +53,9 @@ class Logger {
         })
         content = typeof result.data === 'string' ? result.data : ''
       } catch (e) {
-        // 文件不存在，首次运行
         return
       }
 
-      // 解析文件内容（只保留最后 MAX_MEMORY_LOGS 行）
       const lines = content.split('\n').filter((l) => l.trim())
       const recent = lines.slice(-MAX_MEMORY_LOGS)
       const parsed = recent.map((line) => this._parseLine(line)).filter(Boolean)
@@ -71,12 +67,10 @@ class Logger {
     }
   }
 
-  /** 获取日志快照 */
   getLogs() {
     return this.logs.slice()
   }
 
-  /** 清空日志（内存 + 文件） */
   async clear() {
     this.logs = []
     this._lastSavedIndex = 0
@@ -94,12 +88,10 @@ class Logger {
     }
   }
 
-  /** 获取日志文件路径（用于显示） */
   getFilePath() {
     return Capacitor.isNativePlatform() ? `Documents/${LOG_DIR}/${LOG_FILE}` : '（Web 平台仅内存）'
   }
 
-  /** 获取文件大小（字节） */
   async getFileSize() {
     if (!Capacitor.isNativePlatform()) return 0
     try {
@@ -114,7 +106,6 @@ class Logger {
     }
   }
 
-  /** 导出：写到 cache 并弹分享面板 */
   async export() {
     const content = this.logs.map((e) => this._formatLine(e)).join('\n')
     const filename = `jmviewer-log-${this._dateSuffix()}.txt`
@@ -138,7 +129,6 @@ class Logger {
       return { filename }
     }
 
-    // Web 平台下载
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -197,7 +187,6 @@ class Logger {
 
     window.addEventListener('error', (e) => {
       if (e.target && e.target !== window && e.target.tagName) {
-        // 资源加载错误（img/script）
         this.error('[资源加载错误]', e.target.tagName, e.target.src || e.target.href || '')
         return
       }
@@ -228,16 +217,13 @@ class Logger {
 
     this.logs.push(entry)
 
-    // 超出内存限制，裁剪（同时调整已保存索引）
     if (this.logs.length > MAX_MEMORY_LOGS) {
       const removed = this.logs.length - MAX_MEMORY_LOGS
       this.logs = this.logs.slice(-MAX_MEMORY_LOGS)
       this._lastSavedIndex = Math.max(0, this._lastSavedIndex - removed)
     }
 
-    // 调度保存
     if (level === 'error') {
-      // 错误立即保存
       clearTimeout(this._saveTimer)
       this._flushSave()
     } else {
@@ -255,7 +241,18 @@ class Logger {
       return `${arg.name}: ${arg.message}${arg.stack ? '\n  ' + arg.stack.split('\n').join('\n  ') : ''}`
     }
     try {
-      return JSON.stringify(arg)
+      const result = JSON.stringify(arg, (key, value) => {
+        // 处理循环引用
+        if (typeof value === 'object' && value !== null) {
+          if (this._seen && this._seen.has(value)) return '[Circular]'
+        }
+        return value
+      })
+      // 空对象或无法序列化的情况，返回更友好的表示
+      if (result === '{}' || result === undefined) {
+        return String(arg)
+      }
+      return result
     } catch {
       return String(arg)
     }
@@ -264,13 +261,37 @@ class Logger {
   _formatLine(entry) {
     const time = this._formatTime(entry.time)
     const level = LEVEL_LABEL[entry.level] || entry.level.toUpperCase()
-    // 多行消息统一缩进
     const msg = entry.message.replace(/\n/g, '\n    ')
     return `${time} [${level}] ${msg}`
   }
 
-  _formatTime(iso) {
-    const d = new Date(iso)
+  /**
+   * ★ 兼容多种时间格式：
+   * - Date 对象
+   * - "2026-10-05T20:25:13.571Z" (ISO)
+   * - "2026-10-05 20:25:13.571" (从文件读取的日志时间，iOS 上不能直接 new Date)
+   */
+  _formatTime(input) {
+    let d
+
+    if (input instanceof Date) {
+      d = input
+    } else if (typeof input === 'string') {
+      if (input.includes('T')) {
+        d = new Date(input)
+      } else {
+        // 把 "2026-10-05 20:25:13.571" 转成 "2026-10-05T20:25:13.571"
+        d = new Date(input.replace(' ', 'T'))
+      }
+    } else {
+      d = new Date(input)
+    }
+
+    if (isNaN(d.getTime())) {
+      // 解析失败，返回原字符串
+      return typeof input === 'string' ? input : String(input)
+    }
+
     const pad = (n, len = 2) => String(n).padStart(len, '0')
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`
   }
@@ -300,7 +321,6 @@ class Logger {
     try {
       const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem')
 
-      // 确保目录存在
       try {
         await Filesystem.mkdir({
           path: LOG_DIR,
@@ -315,7 +335,6 @@ class Logger {
       const text = newEntries.map((e) => this._formatLine(e)).join('\n') + '\n'
       const filePath = `${LOG_DIR}/${LOG_FILE}`
 
-      // 检查文件大小
       let size = 0
       try {
         const stat = await Filesystem.stat({
@@ -328,7 +347,6 @@ class Logger {
       }
 
       if (size > MAX_FILE_SIZE) {
-        // 文件过大，重置
         const header = `# 日志文件超过 ${Math.round(MAX_FILE_SIZE / 1024 / 1024)}MB，已重置\n`
         await Filesystem.writeFile({
           path: filePath,
@@ -337,7 +355,6 @@ class Logger {
           encoding: Encoding.UTF8,
         })
       } else {
-        // 追加
         if (size === 0) {
           await Filesystem.writeFile({
             path: filePath,
@@ -366,5 +383,5 @@ class Logger {
 
 export const logger = new Logger()
 
-// ★ 模块加载时立即拦截（同步）
+// 模块加载时立即拦截
 logger.patch()
