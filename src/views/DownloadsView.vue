@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { Capacitor } from '@capacitor/core'
 import { downloadManager, DownloadStatus } from '@/utils/downloadManager.js'
 import { useStoragePermission } from '@/composables/useStoragePermission.js'
 import DownloadItem from '@/components/download/DownloadItem.vue'
@@ -10,10 +9,9 @@ import '@/styles/download.css'
 const tasks = ref([])
 const activeTab = ref('all')
 const showPermGate = ref(false)
-
-const { granted, check: checkPerm, platform } = useStoragePermission()
-
 let unsubscribe = null
+
+const { check: checkPerm, platform } = useStoragePermission()
 
 const filteredTasks = computed(() => {
   if (activeTab.value === 'active') {
@@ -45,22 +43,29 @@ function refresh() {
   tasks.value = downloadManager.getTasks()
 }
 
-async function handleDownloadZip(taskId) {
+/** ★ 已完成任务点击：原生打开文件夹，Web 下载 ZIP */
+async function handleOpenOutput(taskId) {
   try {
-    await downloadManager.downloadZip(taskId)
+    await downloadManager.openOutput(taskId)
   } catch (e) {
-    alert('下载失败：' + (e?.message || '未知错误'))
+    alert('操作失败：' + (e?.message || '未知错误'))
   }
+}
+
+async function initDownloadManager() {
+  await downloadManager.init()
+  refresh()
+  if (unsubscribe) unsubscribe()
+  unsubscribe = downloadManager.addListener(refresh)
 }
 
 function onPermGranted() {
   showPermGate.value = false
-  // 授权后初始化下载管理器（创建目录）
-  downloadManager.init().then(refresh)
+  initDownloadManager()
 }
 
 onMounted(async () => {
-  // Android 先检测权限
+  // 仅 Android 需要权限
   if (platform.value === 'android') {
     const ok = await checkPerm()
     if (!ok) {
@@ -69,9 +74,7 @@ onMounted(async () => {
     }
   }
 
-  await downloadManager.init()
-  refresh()
-  unsubscribe = downloadManager.addListener(refresh)
+  await initDownloadManager()
 })
 
 onBeforeUnmount(() => {
@@ -104,6 +107,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="filteredTasks.length === 0" class="dl-empty">
+      <span class="dl-empty-icon">📥</span>
       <p>暂无下载任务</p>
     </div>
 
@@ -116,7 +120,7 @@ onBeforeUnmount(() => {
         @resume="downloadManager.resume($event)"
         @cancel="downloadManager.cancel($event)"
         @remove="downloadManager.remove($event)"
-        @download="handleDownloadZip"
+        @download="handleOpenOutput"
       />
     </div>
 

@@ -1,11 +1,17 @@
 import JSZip from 'jszip'
 import { offlineStorage } from './offlineStorage.js'
 
+/**
+ * 判断某张图是否需要解密
+ */
 function needsDecrypt(albumId, imageName) {
   const id = Number(albumId)
   return id >= 220980 && !imageName.endsWith('.gif')
 }
 
+/**
+ * 生成解密后的文件名（扩展名换成 .png）
+ */
 function getDecodedName(originalName, albumId) {
   if (needsDecrypt(albumId, originalName)) {
     return originalName.replace(/\.[^.]+$/, '.png')
@@ -13,8 +19,17 @@ function getDecodedName(originalName, albumId) {
   return originalName
 }
 
+/**
+ * 将下载好的章节图片打包为 ZIP
+ * @param {Object} album 漫画信息 { id, name, author }
+ * @param {Array} chapters 章节数组 [{ id, name, images: [] }]
+ * @param {Function} onProgress 进度回调 (percent, message)
+ * @returns {Promise<Blob>} ZIP Blob
+ */
 export async function zipChapters(album, chapters, onProgress) {
   const zip = new JSZip()
+
+  // 漫画根目录
   const rootFolder = zip.folder(sanitizeName(album.name || `album_${album.id}`))
 
   let totalImages = 0
@@ -22,16 +37,19 @@ export async function zipChapters(album, chapters, onProgress) {
   let successImages = 0
   const failedImages = []
 
+  // 统计总图片数
   for (const ch of chapters) {
     totalImages += (ch.images || []).length
   }
 
+  // 按章节顺序添加
   for (let i = 0; i < chapters.length; i++) {
     const chapter = chapters[i]
     const chapterNum = i + 1
     const chapterName = `${chapterNum}. ${sanitizeName(chapter.name || `第${chapterNum}章`)}`
     const chapterFolder = rootFolder.folder(chapterName)
 
+    // ★ 从解密后目录读取
     const decodedDir = offlineStorage.decodedChapterPath(album.id, chapter.id)
 
     for (let j = 0; j < chapter.images.length; j++) {
@@ -49,13 +67,13 @@ export async function zipChapters(album, chapters, onProgress) {
           if (!clean || clean.length < 100) {
             failedImages.push(imagePath)
           } else {
-            // ZIP 里用解密后的名字（.png），用户能直接打开
+            // ZIP 内使用解密后的文件名（.png）
             chapterFolder.file(decodedName, clean, { base64: true })
             successImages++
           }
         }
       } catch (e) {
-        console.warn(`[ZIP] 读取失败: ${imagePath}`, e)
+        console.warn(`[ZIP] 读取图片失败: ${imagePath}`, e)
         failedImages.push(imagePath)
       }
 
@@ -69,6 +87,7 @@ export async function zipChapters(album, chapters, onProgress) {
     }
   }
 
+  // 全部失败 → 抛错
   if (successImages === 0) {
     throw new Error(`打包失败：${failedImages.length} 张图片全部读取失败`)
   }
@@ -95,6 +114,7 @@ export async function zipChapters(album, chapters, onProgress) {
   return blob
 }
 
+/** 清理文件名中的非法字符 */
 function sanitizeName(name) {
   return (name || 'unknown')
     .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
@@ -103,6 +123,7 @@ function sanitizeName(name) {
     .slice(0, 100)
 }
 
+/** 获取 ZIP 文件名 */
 export function getZipFileName(album) {
   const d = new Date()
   const pad = (n) => String(n).padStart(2, '0')
@@ -110,4 +131,4 @@ export function getZipFileName(album) {
   return `${sanitizeName(album.name || 'comic')}_${ts}.zip`
 }
 
-export { sanitizeName }
+export { sanitizeName, getDecodedName, needsDecrypt }

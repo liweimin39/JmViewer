@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core'
+import { offlineStorage } from './offlineStorage.js'
 
-const LOG_DIR = 'logs'
 const LOG_FILE = 'app.log'
 const MAX_MEMORY_LOGS = 500
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
@@ -18,6 +18,22 @@ class Logger {
     this._originalConsole = null
     this._saving = false
   }
+
+  // ==================== 路径 ====================
+
+  _filePath() {
+    return `${offlineStorage.logsPath()}/${LOG_FILE}`
+  }
+
+  _dirPath() {
+    return offlineStorage.logsPath()
+  }
+
+  _directory() {
+    return offlineStorage.mainDirectory()
+  }
+
+  // ==================== 初始化 ====================
 
   patch() {
     this._patchConsole()
@@ -41,18 +57,26 @@ class Logger {
     }
 
     try {
-      const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem')
-      const path = `${LOG_DIR}/${LOG_FILE}`
+      const { Filesystem, Encoding } = await import('@capacitor/filesystem')
+
+      // 确保目录存在
+      try {
+        await Filesystem.mkdir({
+          path: this._dirPath(),
+          directory: this._directory(),
+          recursive: true,
+        })
+      } catch {}
 
       let content = ''
       try {
         const result = await Filesystem.readFile({
-          path,
-          directory: Directory.Documents,
+          path: this._filePath(),
+          directory: this._directory(),
           encoding: Encoding.UTF8,
         })
         content = typeof result.data === 'string' ? result.data : ''
-      } catch (e) {
+      } catch {
         return
       }
 
@@ -67,6 +91,8 @@ class Logger {
     }
   }
 
+  // ==================== 公共 API ====================
+
   getLogs() {
     return this.logs.slice()
   }
@@ -78,27 +104,27 @@ class Logger {
     if (!Capacitor.isNativePlatform()) return
 
     try {
-      const { Filesystem, Directory } = await import('@capacitor/filesystem')
+      const { Filesystem } = await import('@capacitor/filesystem')
       await Filesystem.deleteFile({
-        path: `${LOG_DIR}/${LOG_FILE}`,
-        directory: Directory.Documents,
+        path: this._filePath(),
+        directory: this._directory(),
       })
-    } catch (e) {
-      // 文件不存在，忽略
+    } catch {
+      // 文件不存在
     }
   }
 
   getFilePath() {
-    return Capacitor.isNativePlatform() ? `Documents/${LOG_DIR}/${LOG_FILE}` : '（Web 平台仅内存）'
+    return Capacitor.isNativePlatform() ? this._filePath() : '（Web 平台仅内存）'
   }
 
   async getFileSize() {
     if (!Capacitor.isNativePlatform()) return 0
     try {
-      const { Filesystem, Directory } = await import('@capacitor/filesystem')
+      const { Filesystem } = await import('@capacitor/filesystem')
       const stat = await Filesystem.stat({
-        path: `${LOG_DIR}/${LOG_FILE}`,
-        directory: Directory.Documents,
+        path: this._filePath(),
+        directory: this._directory(),
       })
       return stat.size || 0
     } catch {
@@ -156,7 +182,7 @@ class Logger {
     this._log('error', args)
   }
 
-  // ==================== 内部方法 ====================
+  // ==================== 内部：拦截 ====================
 
   _patchConsole() {
     const orig = {
@@ -208,6 +234,8 @@ class Logger {
     })
   }
 
+  // ==================== 内部：记录 ====================
+
   _log(level, args) {
     const entry = {
       time: new Date().toISOString(),
@@ -240,15 +268,12 @@ class Logger {
     if (arg instanceof Error) {
       return `${arg.name}: ${arg.message}${arg.stack ? '\n  ' + arg.stack.split('\n').join('\n  ') : ''}`
     }
+    // DOM 元素
+    if (typeof arg === 'object' && arg !== null && arg.nodeType) {
+      return `<${(arg.tagName || 'element').toLowerCase()}>`
+    }
     try {
-      const result = JSON.stringify(arg, (key, value) => {
-        // 处理循环引用
-        if (typeof value === 'object' && value !== null) {
-          if (this._seen && this._seen.has(value)) return '[Circular]'
-        }
-        return value
-      })
-      // 空对象或无法序列化的情况，返回更友好的表示
+      const result = JSON.stringify(arg)
       if (result === '{}' || result === undefined) {
         return String(arg)
       }
@@ -265,12 +290,6 @@ class Logger {
     return `${time} [${level}] ${msg}`
   }
 
-  /**
-   * ★ 兼容多种时间格式：
-   * - Date 对象
-   * - "2026-10-05T20:25:13.571Z" (ISO)
-   * - "2026-10-05 20:25:13.571" (从文件读取的日志时间，iOS 上不能直接 new Date)
-   */
   _formatTime(input) {
     let d
 
@@ -280,7 +299,6 @@ class Logger {
       if (input.includes('T')) {
         d = new Date(input)
       } else {
-        // 把 "2026-10-05 20:25:13.571" 转成 "2026-10-05T20:25:13.571"
         d = new Date(input.replace(' ', 'T'))
       }
     } else {
@@ -288,7 +306,6 @@ class Logger {
     }
 
     if (isNaN(d.getTime())) {
-      // 解析失败，返回原字符串
       return typeof input === 'string' ? input : String(input)
     }
 
@@ -312,6 +329,8 @@ class Logger {
     }
   }
 
+  // ==================== 内部：保存 ====================
+
   async _flushSave() {
     if (!Capacitor.isNativePlatform()) return
     if (this._saving) return
@@ -319,54 +338,49 @@ class Logger {
 
     this._saving = true
     try {
-      const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem')
+      const { Filesystem, Encoding } = await import('@capacitor/filesystem')
 
       try {
         await Filesystem.mkdir({
-          path: LOG_DIR,
-          directory: Directory.Documents,
+          path: this._dirPath(),
+          directory: this._directory(),
           recursive: true,
         })
-      } catch {
-        // 目录已存在
-      }
+      } catch {}
 
       const newEntries = this.logs.slice(this._lastSavedIndex)
       const text = newEntries.map((e) => this._formatLine(e)).join('\n') + '\n'
-      const filePath = `${LOG_DIR}/${LOG_FILE}`
 
       let size = 0
       try {
         const stat = await Filesystem.stat({
-          path: filePath,
-          directory: Directory.Documents,
+          path: this._filePath(),
+          directory: this._directory(),
         })
         size = stat.size || 0
-      } catch {
-        // 文件不存在
-      }
+      } catch {}
 
       if (size > MAX_FILE_SIZE) {
         const header = `# 日志文件超过 ${Math.round(MAX_FILE_SIZE / 1024 / 1024)}MB，已重置\n`
         await Filesystem.writeFile({
-          path: filePath,
+          path: this._filePath(),
           data: header + text,
-          directory: Directory.Documents,
+          directory: this._directory(),
           encoding: Encoding.UTF8,
         })
       } else {
         if (size === 0) {
           await Filesystem.writeFile({
-            path: filePath,
+            path: this._filePath(),
             data: text,
-            directory: Directory.Documents,
+            directory: this._directory(),
             encoding: Encoding.UTF8,
           })
         } else {
           await Filesystem.appendFile({
-            path: filePath,
+            path: this._filePath(),
             data: text,
-            directory: Directory.Documents,
+            directory: this._directory(),
             encoding: Encoding.UTF8,
           })
         }

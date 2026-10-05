@@ -2,144 +2,130 @@ import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 
 const APP_ROOT = 'JmViewer'
-const DIR_TMP = 'Tmp'
-const DIR_RAW = 'ComicImages'
-const DIR_DECODED = 'DecodedComicImages'
-const DIR_ZIP = 'DownloadComics'
+const TMP_DIR = 'Tmp'
+const COMICS_DIR = 'Comics'
+const RAW_IMAGES_DIR = 'ComicImages'
+const LOGS_DIR = 'logs'
 const TASK_FILE = 'download-tasks.json'
 
 function isAndroid() {
   return Capacitor.getPlatform() === 'android'
 }
-
 function isNative() {
   return Capacitor.isNativePlatform()
 }
 
-/**
- * 根目录
- * - Android: /storage/emulated/0/
- * - iOS: App 沙盒 Documents/
- * - Web: IndexedDB
- */
-function getRootDir() {
-  if (isAndroid()) return Directory.ExternalStorage
-  return Directory.Documents
+/** 主目录（Comics / logs / tasks） */
+function mainDirectory() {
+  return isAndroid() ? Directory.ExternalStorage : Directory.Documents
+}
+
+/** 原图临时目录（Android 用外部缓存，iOS 用 Documents） */
+function rawDirectory() {
+  return isAndroid() ? Directory.ExternalCache : Directory.Documents
 }
 
 function joinPath(...parts) {
   return parts.filter(Boolean).join('/').replace(/\/+/g, '/')
 }
 
-// ==================== 路径生成 ====================
+// ==================== 路径 ====================
 
-function appRootPath() {
+function mainRootPath() {
   return APP_ROOT
 }
 
-function tmpPath() {
-  return joinPath(APP_ROOT, DIR_TMP)
+function tmpRootPath() {
+  return joinPath(APP_ROOT, TMP_DIR)
 }
 
-function rawAlbumPath(albumId) {
-  return joinPath(APP_ROOT, DIR_RAW, String(albumId))
+function logsPath() {
+  return joinPath(APP_ROOT, TMP_DIR, LOGS_DIR)
 }
 
-function rawChapterPath(albumId, chapterId) {
-  return joinPath(APP_ROOT, DIR_RAW, String(albumId), 'chapters', String(chapterId))
+function comicsPath() {
+  return joinPath(APP_ROOT, COMICS_DIR)
+}
+
+/** 解密图片章节目录 */
+function decodedChapterPath(albumId, chapterId) {
+  return joinPath(APP_ROOT, COMICS_DIR, String(albumId), 'chapters', String(chapterId))
 }
 
 function decodedAlbumPath(albumId) {
-  return joinPath(APP_ROOT, DIR_DECODED, String(albumId))
+  return joinPath(APP_ROOT, COMICS_DIR, String(albumId))
 }
 
-function decodedChapterPath(albumId, chapterId) {
-  return joinPath(APP_ROOT, DIR_DECODED, String(albumId), 'chapters', String(chapterId))
-}
-
-function zipDirPath() {
-  return joinPath(APP_ROOT, DIR_ZIP)
-}
-
-function zipFilePath(fileName) {
-  return joinPath(APP_ROOT, DIR_ZIP, fileName)
+/** 原图章节目录 */
+function rawChapterPath(albumId, chapterId) {
+  const base = isAndroid()
+    ? joinPath(TMP_DIR, RAW_IMAGES_DIR)
+    : joinPath(APP_ROOT, TMP_DIR, RAW_IMAGES_DIR)
+  return joinPath(base, String(albumId), 'chapters', String(chapterId))
 }
 
 function taskFilePath() {
   return joinPath(APP_ROOT, TASK_FILE)
 }
 
-// ==================== 目录/文件操作 ====================
+// ==================== 内部通用 ====================
 
-async function ensureDir(path) {
+async function mkdirSafe(path, directory) {
+  if (!path) return
   try {
-    await Filesystem.mkdir({
-      path,
-      directory: getRootDir(),
-      recursive: true,
-    })
-  } catch (e) {
+    await Filesystem.mkdir({ path, directory, recursive: true })
+  } catch {
     // 已存在
   }
 }
 
-/** 初始化所有必需目录 */
-async function initDirs() {
-  const dirs = [
-    appRootPath(),
-    tmpPath(),
-    joinPath(APP_ROOT, DIR_RAW),
-    joinPath(APP_ROOT, DIR_DECODED),
-    joinPath(APP_ROOT, DIR_ZIP),
-  ]
-  for (const d of dirs) {
-    await ensureDir(d)
-  }
+async function writeFileInternal(path, data, directory, encoding) {
+  const parent = path.substring(0, path.lastIndexOf('/'))
+  if (parent) await mkdirSafe(parent, directory)
+
+  const options = { path, data, directory, recursive: true }
+  if (encoding) options.encoding = encoding
+
+  await Filesystem.writeFile(options)
+}
+
+async function readFileInternal(path, directory, encoding) {
+  const options = { path, directory }
+  if (encoding) options.encoding = encoding
+  const result = await Filesystem.readFile(options)
+  return result.data
+}
+
+// ==================== 主目录操作 ====================
+
+async function ensureDir(path) {
+  await mkdirSafe(path, mainDirectory())
+}
+
+async function ensureRawDir(path) {
+  await mkdirSafe(path, rawDirectory())
 }
 
 async function writeText(path, text) {
-  const dir = path.substring(0, path.lastIndexOf('/'))
-  await ensureDir(dir)
-  await Filesystem.writeFile({
-    path,
-    data: text,
-    directory: getRootDir(),
-    encoding: Encoding.UTF8,
-    recursive: true,
-  })
+  await writeFileInternal(path, text, mainDirectory(), Encoding.UTF8)
 }
 
 async function readText(path) {
   try {
-    const result = await Filesystem.readFile({
-      path,
-      directory: getRootDir(),
-      encoding: Encoding.UTF8,
-    })
-    return typeof result.data === 'string' ? result.data : null
+    const data = await readFileInternal(path, mainDirectory(), Encoding.UTF8)
+    return typeof data === 'string' ? data : null
   } catch {
     return null
   }
 }
 
 async function writeBase64(path, base64) {
-  const dir = path.substring(0, path.lastIndexOf('/'))
-  await ensureDir(dir)
-  await Filesystem.writeFile({
-    path,
-    data: base64,
-    directory: getRootDir(),
-    recursive: true,
-  })
+  await writeFileInternal(path, base64, mainDirectory())
 }
 
 async function readBase64(path) {
   try {
-    const result = await Filesystem.readFile({
-      path,
-      directory: getRootDir(),
-    })
-    let data = result.data
+    let data = await readFileInternal(path, mainDirectory())
     if (typeof data !== 'string') data = String(data)
     return data
   } catch {
@@ -147,72 +133,128 @@ async function readBase64(path) {
   }
 }
 
-async function remove(path) {
+// ==================== 原图目录操作 ====================
+
+async function writeRawBase64(path, base64) {
+  await writeFileInternal(path, base64, rawDirectory())
+}
+
+async function readRawBase64(path) {
   try {
-    await Filesystem.deleteFile({
-      path,
-      directory: getRootDir(),
-      recursive: true,
-    })
+    let data = await readFileInternal(path, rawDirectory())
+    if (typeof data !== 'string') data = String(data)
+    return data
+  } catch {
+    return null
+  }
+}
+
+// ==================== 通用 ====================
+
+async function remove(path, directory) {
+  const dir = directory || mainDirectory()
+  try {
+    await Filesystem.deleteFile({ path, directory: dir, recursive: true })
   } catch {
     // 忽略
   }
 }
 
-async function exists(path) {
+async function removeRaw(path) {
+  return remove(path, rawDirectory())
+}
+
+async function exists(path, directory) {
+  const dir = directory || mainDirectory()
   try {
-    await Filesystem.stat({
-      path,
-      directory: getRootDir(),
-    })
+    await Filesystem.stat({ path, directory: dir })
     return true
   } catch {
     return false
   }
 }
 
-async function getSize(path) {
+async function existsRaw(path) {
+  return exists(path, rawDirectory())
+}
+
+async function getSize(path, directory) {
+  const dir = directory || mainDirectory()
   try {
-    const stat = await Filesystem.stat({
-      path,
-      directory: getRootDir(),
-    })
+    const stat = await Filesystem.stat({ path, directory: dir })
     return stat.size || 0
   } catch {
     return 0
   }
 }
 
-async function getUri(path) {
-  const result = await Filesystem.getUri({
-    path,
-    directory: getRootDir(),
-  })
+async function getSizeRaw(path) {
+  return getSize(path, rawDirectory())
+}
+
+async function getUri(path, directory) {
+  const dir = directory || mainDirectory()
+  const result = await Filesystem.getUri({ path, directory: dir })
   return result.uri
 }
 
-async function listDir(path) {
+async function getUriRaw(path) {
+  return getUri(path, rawDirectory())
+}
+
+async function listDir(path, directory) {
+  const dir = directory || mainDirectory()
   try {
-    const result = await Filesystem.readdir({
-      path,
-      directory: getRootDir(),
-    })
+    const result = await Filesystem.readdir({ path, directory: dir })
     return result.files || []
   } catch {
     return []
   }
 }
 
-/** 清理 Tmp 目录 */
+async function listDirRaw(path) {
+  return listDir(path, rawDirectory())
+}
+
+// ==================== 初始化 ====================
+
+/** 初始化所有必需目录 */
+async function initDirs() {
+  // 主目录下的目录
+  await ensureDir(mainRootPath())
+  await ensureDir(tmpRootPath())
+  await ensureDir(logsPath())
+  await ensureDir(comicsPath())
+
+  // 原图目录
+  const rawBase = isAndroid()
+    ? joinPath(TMP_DIR, RAW_IMAGES_DIR)
+    : joinPath(APP_ROOT, TMP_DIR, RAW_IMAGES_DIR)
+  await ensureRawDir(rawBase)
+}
+
+/** 清空 Tmp 目录（保留 logs） */
 async function clearTmp() {
   try {
-    const tmp = tmpPath()
+    const tmp = tmpRootPath()
     const items = await listDir(tmp)
     for (const item of items) {
-      const childPath = joinPath(tmp, item.name)
-      await remove(childPath)
+      // 保留 logs 目录
+      if (item.name === LOGS_DIR) continue
+      await remove(joinPath(tmp, item.name))
     }
-  } catch (e) {
+
+    // Android 的 Cache 里的原图也要清
+    if (isAndroid()) {
+      const rawBase = joinPath(TMP_DIR, RAW_IMAGES_DIR)
+      try {
+        const rawItems = await listDirRaw(rawBase)
+        for (const item of rawItems) {
+          await removeRaw(joinPath(rawBase, item.name))
+        }
+      } catch {}
+    }
+  } catch {
     // 忽略
   }
 }
@@ -235,38 +277,48 @@ async function loadTasks() {
 
 export const offlineStorage = {
   APP_ROOT,
-  DIR_TMP,
-  DIR_RAW,
-  DIR_DECODED,
-  DIR_ZIP,
+  TMP_DIR,
+  COMICS_DIR,
+  LOGS_DIR,
 
   isNative,
   isAndroid,
-  getRootDir,
+  mainDirectory,
+  rawDirectory,
 
-  appRootPath,
-  tmpPath,
-  rawAlbumPath,
-  rawChapterPath,
-  decodedAlbumPath,
+  mainRootPath,
+  tmpRootPath,
+  logsPath,
+  comicsPath,
   decodedChapterPath,
-  zipDirPath,
-  zipFilePath,
+  decodedAlbumPath,
+  rawChapterPath,
   taskFilePath,
 
   initDirs,
+  clearTmp,
+
   ensureDir,
+  ensureRawDir,
+
   writeText,
   readText,
   writeBase64,
   readBase64,
-  remove,
-  exists,
-  getSize,
-  getUri,
-  listDir,
 
-  clearTmp,
+  writeRawBase64,
+  readRawBase64,
+
+  remove,
+  removeRaw,
+  exists,
+  existsRaw,
+  getSize,
+  getSizeRaw,
+  getUri,
+  getUriRaw,
+  listDir,
+  listDirRaw,
 
   saveTasks,
   loadTasks,

@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import { DownloadStatus } from '@/utils/downloadManager.js'
 
 const props = defineProps({
@@ -7,6 +8,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['pause', 'resume', 'cancel', 'remove', 'download'])
+
+const isNative = Capacitor.isNativePlatform()
 
 const statusLabel = computed(() => {
   const map = {
@@ -92,7 +95,6 @@ function formatTime(iso) {
         <span class="di-time">{{ formatTime(task.createdAt) }}</span>
       </div>
 
-      <!-- 下载中 -->
       <template v-if="isDownloading">
         <div class="di-progress-detail">
           <span class="di-chapter-progress">{{ chapterProgress }}</span>
@@ -109,7 +111,6 @@ function formatTime(iso) {
         </div>
       </template>
 
-      <!-- 打包中 -->
       <template v-else-if="isPackaging">
         <div class="di-message">{{ task.message || '正在打包 ZIP...' }}</div>
         <div class="di-progress-bar">
@@ -117,17 +118,14 @@ function formatTime(iso) {
         </div>
       </template>
 
-      <!-- 等待中 -->
       <template v-else-if="isPending">
         <div class="di-message">{{ task.message || '排队等待中...' }}</div>
       </template>
 
-      <!-- 已完成 -->
       <template v-else-if="isCompleted">
         <div class="di-message success-msg">已完成 · {{ formatSize(task.fileSize) }}</div>
       </template>
 
-      <!-- 其他状态 -->
       <template v-else>
         <div v-if="task.message" class="di-message">{{ task.message }}</div>
         <div v-if="task.status === DownloadStatus.FAILED" class="di-error">
@@ -137,14 +135,29 @@ function formatTime(iso) {
     </div>
 
     <div class="di-actions">
-      <!-- 已完成：下载 -->
+      <!-- 已完成：原生 = 文件夹图标，Web = 下载图标 -->
       <button
         v-if="isCompleted"
         class="di-btn download"
         @click="emit('download', task.id)"
-        title="下载 ZIP"
+        :title="isNative ? '打开文件夹' : '下载 ZIP'"
       >
         <svg
+          v-if="isNative"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+        </svg>
+        <svg
+          v-else
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           width="18"
@@ -161,17 +174,14 @@ function formatTime(iso) {
         </svg>
       </button>
 
-      <!-- 进行中：暂停 -->
       <button v-if="isActive" class="di-btn pause" @click="emit('pause', task.id)" title="暂停">
         ⏸
       </button>
 
-      <!-- 已暂停/失败：继续 -->
       <button v-if="isPaused" class="di-btn resume" @click="emit('resume', task.id)" title="继续">
         ▶
       </button>
 
-      <!-- 进行中/已暂停：取消 -->
       <button
         v-if="isActive || isPaused"
         class="di-btn cancel"
@@ -181,7 +191,6 @@ function formatTime(iso) {
         ✕
       </button>
 
-      <!-- 已完成/已取消：删除 -->
       <button
         v-if="isCompleted || task.status === DownloadStatus.CANCELLED"
         class="di-btn remove"
