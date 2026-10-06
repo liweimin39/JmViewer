@@ -26,10 +26,48 @@ class LocalDB {
 
   _open() {
     if (this._dbPromise) return this._dbPromise
+
     this._dbPromise = new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, DB_VERSION)
-      req.onerror = () => reject(req.error)
-      req.onsuccess = () => resolve(req.result)
+      let req
+      try {
+        req = indexedDB.open(DB_NAME, DB_VERSION)
+      } catch (e) {
+        this._dbPromise = null
+        reject(e)
+        return
+      }
+
+      req.onerror = () => {
+        // 打开失败，下次重试
+        this._dbPromise = null
+        reject(req.error)
+      }
+
+      req.onblocked = () => {
+        console.warn('[localDB] open blocked（其他标签页占用）')
+      }
+
+      req.onsuccess = () => {
+        const db = req.result
+
+        // ★ 连接被系统/浏览器关闭时，清掉缓存，下次自动重连
+        db.onclose = () => {
+          console.warn('[localDB] 连接已被关闭，下次操作将自动重连')
+          this._dbPromise = null
+        }
+
+        // ★ 数据库版本被其他标签页升级时，主动关闭并清缓存
+        db.onversionchange = () => {
+          console.warn('[localDB] 数据库版本变化，关闭当前连接')
+          try {
+            db.close()
+          } catch {}
+          this._dbPromise = null
+        }
+
+        resolve(db)
+      }
+
       req.onupgradeneeded = (e) => {
         const db = e.target.result
         if (!db.objectStoreNames.contains(STORE_USERS)) {
@@ -43,57 +81,135 @@ class LocalDB {
         }
       }
     })
+
     return this._dbPromise
   }
 
+  /**
+   * ★ 核心：包装所有 IDB 操作
+   * - 连接失效（InvalidStateError / TransactionInactiveError）时自动重连 + 重试一次
+   */
+  async _withDB(fn) {
+    let db
+    try {
+      db = await this._open()
+      return await fn(db)
+    } catch (e) {
+      // 连接失效或事务失效 → 清缓存重连一次
+      if (
+        e &&
+        (e.name === 'InvalidStateError' ||
+          e.name === 'TransactionInactiveError' ||
+          e.name === 'DatabaseClosedError' ||
+          /connection is closing/i.test(e.message || ''))
+      ) {
+        console.warn('[localDB] 连接失效，重试一次:', e.name)
+        this._dbPromise = null
+        db = await this._open()
+        return await fn(db)
+      }
+      throw e
+    }
+  }
+
   async _get(store, key) {
-    const db = await this._open()
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(store, 'readonly')
-      const req = tx.objectStore(store).get(key)
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => reject(req.error)
-    })
+    return this._withDB(
+      (db) =>
+        new Promise((resolve, reject) => {
+          let tx
+          try {
+            tx = db.transaction(store, 'readonly')
+          } catch (e) {
+            reject(e)
+            return
+          }
+
+          const req = tx.objectStore(store).get(key)
+          req.onsuccess = () => resolve(req.result)
+          req.onerror = () => reject(req.error)
+          tx.onerror = () => reject(tx.error)
+        }),
+    )
   }
 
   async _getAll(store) {
-    const db = await this._open()
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(store, 'readonly')
-      const req = tx.objectStore(store).getAll()
-      req.onsuccess = () => resolve(req.result || [])
-      req.onerror = () => reject(req.error)
-    })
+    return this._withDB(
+      (db) =>
+        new Promise((resolve, reject) => {
+          let tx
+          try {
+            tx = db.transaction(store, 'readonly')
+          } catch (e) {
+            reject(e)
+            return
+          }
+
+          const req = tx.objectStore(store).getAll()
+          req.onsuccess = () => resolve(req.result || [])
+          req.onerror = () => reject(req.error)
+          tx.onerror = () => reject(tx.error)
+        }),
+    )
   }
 
   async _put(store, value) {
-    const db = await this._open()
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(store, 'readwrite')
-      const req = tx.objectStore(store).put(value)
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => reject(req.error)
-    })
+    return this._withDB(
+      (db) =>
+        new Promise((resolve, reject) => {
+          let tx
+          try {
+            tx = db.transaction(store, 'readwrite')
+          } catch (e) {
+            reject(e)
+            return
+          }
+
+          const req = tx.objectStore(store).put(value)
+          req.onsuccess = () => resolve(req.result)
+          req.onerror = () => reject(req.error)
+          tx.onerror = () => reject(tx.error)
+        }),
+    )
   }
 
   async _delete(store, key) {
-    const db = await this._open()
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(store, 'readwrite')
-      const req = tx.objectStore(store).delete(key)
-      req.onsuccess = () => resolve()
-      req.onerror = () => reject(req.error)
-    })
+    return this._withDB(
+      (db) =>
+        new Promise((resolve, reject) => {
+          let tx
+          try {
+            tx = db.transaction(store, 'readwrite')
+          } catch (e) {
+            reject(e)
+            return
+          }
+
+          const req = tx.objectStore(store).delete(key)
+          req.onsuccess = () => resolve()
+          req.onerror = () => reject(req.error)
+          tx.onerror = () => reject(tx.error)
+        }),
+    )
   }
 
   async _clear(store) {
-    const db = await this._open()
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(store, 'readwrite')
-      const req = tx.objectStore(store).clear()
-      req.onsuccess = () => resolve()
-      req.onerror = () => reject(req.error)
-    })
+    return this._withDB(
+      (db) =>
+        new Promise((resolve, reject) => {
+          let tx
+          try {
+            tx = db.transaction(store, 'readwrite')
+          } catch (e) {
+            reject(e)
+            return
+          }
+
+          const req = tx.objectStore(store).clear()
+          req.onsuccess = () => resolve()
+          req.onerror = () => reject(req.error)
+          tx.onerror = () => reject(tx.error)
+        }),
+    )
   }
 
   // ==================== 初始化 ====================
@@ -102,7 +218,7 @@ class LocalDB {
     if (this._migrated) return
     this._migrated = true
 
-    // 一次性清空所有旧账号数据
+    // 一次性清空旧账号
     if (!localStorage.getItem(LS_CLEANED_V2)) {
       try {
         await this._clear(STORE_USERS)
@@ -116,7 +232,7 @@ class LocalDB {
       }
     }
 
-    // ★ 一次性合并历史到 common（本地 + 云端的历史合并，取最新）
+    // 历史迁移到 common
     if (!localStorage.getItem(LS_HISTORY_COMMON_MIGRATED)) {
       try {
         const all = await this._getAll(STORE_HISTORY)
@@ -131,7 +247,6 @@ class LocalDB {
         }
 
         await this._clear(STORE_HISTORY)
-
         for (const [key, item] of seen) {
           await this._put(STORE_HISTORY, {
             ...item,
@@ -189,25 +304,17 @@ class LocalDB {
     return user
   }
 
-  /**
-   * 重置本地账号
-   * ★ 只清账号 + 收藏，历史保留（因为历史是共享的）
-   */
   async resetLocalAccount() {
     const oldId = localStorage.getItem(LS_LOCAL_USER_ID)
-
-    // 删账号
     if (oldId) await this._delete(STORE_USERS, oldId)
 
-    // 删该账号的收藏
     const favs = await this._getAll(STORE_FAVORITES)
     for (const item of favs) {
       if (item.userId === oldId) await this._delete(STORE_FAVORITES, item.id)
     }
 
-    // ★ 不删历史（历史是 common 的）
+    // 历史保留（common）
 
-    // 重新创建
     const user = {
       id: uuid(),
       username: '用户',
@@ -219,7 +326,7 @@ class LocalDB {
     return user
   }
 
-  // ==================== 收藏（按 userId 隔离）====================
+  // ==================== 收藏 ====================
 
   async addFavorite(userId, comic) {
     if (!userId) throw new Error('缺少 userId')
@@ -265,12 +372,8 @@ class LocalDB {
     }
   }
 
-  // ==================== 历史（★ 内部固定用 common，忽略传入的 userId）====================
+  // ==================== 历史（共享） ====================
 
-  /**
-   * 添加/更新浏览历史
-   * ★ 内部忽略传入的 userId，统一存到 HISTORY_USER_ID
-   */
   async addHistory(userId, entry) {
     const seriesKey = String(entry.comicId || entry.id)
     const chapterId = entry.chapterId
@@ -299,10 +402,6 @@ class LocalDB {
     return item
   }
 
-  /**
-   * 获取浏览历史
-   * ★ 忽略传入的 userId，返回共享历史
-   */
   async getHistory(userId) {
     const all = await this._getAll(STORE_HISTORY)
     return all
@@ -325,11 +424,6 @@ class LocalDB {
 
   // ==================== 导出 / 导入 ====================
 
-  /**
-   * 导出数据
-   * - 收藏：当前 userId 的
-   * - 历史：共享的 common
-   */
   async exportAll(userId) {
     const [user, favorites, history] = await Promise.all([
       this._get(STORE_USERS, userId),
@@ -346,11 +440,6 @@ class LocalDB {
     }
   }
 
-  /**
-   * 导入数据
-   * - 收藏 → 当前 userId
-   * - 历史 → common
-   */
   async importAll(userId, data) {
     if (!userId) throw new Error('缺少 userId')
     if (!data || (data.version !== 1 && data.version !== 2)) {
@@ -360,7 +449,6 @@ class LocalDB {
     let favCount = 0
     let histCount = 0
 
-    // 收藏 → userId
     if (Array.isArray(data.favorites)) {
       for (const item of data.favorites) {
         const comicId = item.comicId || item.id
@@ -377,7 +465,6 @@ class LocalDB {
       }
     }
 
-    // 历史 → common
     if (Array.isArray(data.history)) {
       for (const item of data.history) {
         const seriesKey = item.comicId || item.id
