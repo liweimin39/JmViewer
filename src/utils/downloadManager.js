@@ -25,13 +25,23 @@ export const DownloadStatus = {
   CANCELLED: 'cancelled',
 }
 
-function needsDecrypt(albumId, imageName) {
-  const id = Number(albumId)
+/**
+ * ★ 判断某张图是否需要解密
+ * ★★★ 必须传 chapterId，不是 albumId ★★★
+ * ImageCutter 内部用 (id + path) 算 MD5 决定切片层数，
+ * 传 albumId 会导致切片错误 → 解密乱码
+ */
+function needsDecrypt(chapterId, imageName) {
+  const id = Number(chapterId)
   return id >= 220980 && !imageName.endsWith('.gif')
 }
 
-function getDecodedName(originalName, albumId) {
-  if (needsDecrypt(albumId, originalName)) {
+/**
+ * 生成解密后的文件名（扩展名换成 .png）
+ * ★★★ 必须传 chapterId ★★★
+ */
+function getDecodedName(originalName, chapterId) {
+  if (needsDecrypt(chapterId, originalName)) {
     return originalName.replace(/\.[^.]+$/, '.png')
   }
   return originalName
@@ -180,7 +190,7 @@ class DownloadManager {
       albumAuthor: Array.isArray(album.author) ? album.author.join(' & ') : album.author || '',
       chapterIds: chapters.map((c) => c.id),
       chapterNames: chapters.map((c) => c.name || ''),
-      totalImages: 0, // ★ 动态累加
+      totalImages: 0,
       downloadedImages: 0,
       status: DownloadStatus.PENDING,
       message: '等待下载',
@@ -239,7 +249,7 @@ class DownloadManager {
       this._notifyImmediate()
       await this._saveImmediate()
 
-      // ★★★ 按章节顺序：请求 API → 下载图片 ★★★
+      // ========== 按章节顺序：请求 API → 下载图片 ==========
       for (let ci = 0; ci < chapters.length; ci++) {
         if (task.status === DownloadStatus.CANCELLED) throw new Error(SIGNAL_CANCEL)
         if (task.status === DownloadStatus.PAUSED) throw new Error(SIGNAL_PAUSE)
@@ -247,7 +257,7 @@ class DownloadManager {
         const chapterMeta = chapters[ci]
         const chapterId = chapterMeta.id
 
-        // ========== ① 请求该章节 API ==========
+        // ① 请求该章节 API
         task.currentChapterIndex = ci + 1
         task.currentChapterName = chapterMeta.name || `第${ci + 1}章`
         task.currentChapterImageIndex = 0
@@ -270,7 +280,6 @@ class DownloadManager {
           continue
         }
 
-        // 补全章节名（API 返回的名字可能更完整）
         if (chapterData.name) {
           task.currentChapterName = chapterData.name
         }
@@ -278,7 +287,7 @@ class DownloadManager {
         task.totalImages += images.length
         this._notifyImmediate()
 
-        // ========== ② 下载该章节所有图片 ==========
+        // ② 下载该章节所有图片
         const chapterFull = {
           id: chapterId,
           name: task.currentChapterName,
@@ -319,7 +328,7 @@ class DownloadManager {
 
         const { zipChapters, getZipFileName } = await import('./zipHelper.js')
 
-        // ★ 打包时需要重建章节数据（含 images）——从磁盘读
+        // 从磁盘读章节图片列表
         const zipChaptersData = []
         for (const ch of chapters) {
           const chapterDir = offlineStorage.decodedChapterPath(task.albumId, ch.id)
@@ -413,11 +422,11 @@ class DownloadManager {
 
   /**
    * 下载单个章节的所有图片
-   * 进度 = 已完成章节贡献 + 当前章节进度贡献（单调递增）
+   * ★★★ 关键：解密必须用 chapterId，不是 albumId ★★★
    */
   async _downloadChapter(task, chapter, chapterIndex, totalChapters) {
     const albumId = task.albumId
-    const chapterId = chapter.id
+    const chapterId = chapter.id // ★ 解密用这个
     const images = chapter.images || []
 
     const decodedDir = offlineStorage.decodedChapterPath(albumId, chapterId)
@@ -431,7 +440,6 @@ class DownloadManager {
     task.message = `第 ${task.currentChapterIndex}/${totalChapters} 章 · ${task.currentChapterName}`
     this._notifyImmediate()
 
-    // 进度基准：已完成章节
     const chapterBase = (chapterIndex / totalChapters) * 90
     const chapterContribution = 90 / totalChapters
 
@@ -440,17 +448,17 @@ class DownloadManager {
       if (task.status === DownloadStatus.PAUSED) throw new Error(SIGNAL_PAUSE)
 
       const originalName = images[i]
-      const decodedName = getDecodedName(originalName, albumId)
+      // ★ 用 chapterId 生成解密文件名
+      const decodedName = getDecodedName(originalName, chapterId)
       const decodedPath = `${decodedDir}/${decodedName}`
       const imageUrl = jmApi.getChapterImageURL(chapterId, originalName)
 
       task.currentChapterImageIndex = i + 1
 
-      // ★ 每张更新进度
       const inChapter = (i + 1) / images.length
       task.progress = Math.round(chapterBase + inChapter * chapterContribution)
 
-      // 断点续传
+      // 断点续传（> 100 字节）
       const decodedExists = await offlineStorage.exists(decodedPath)
       if (decodedExists) {
         const size = await offlineStorage.getSize(decodedPath)
@@ -469,11 +477,15 @@ class DownloadManager {
         if (!buffer || buffer.byteLength === 0) throw new Error('响应为空')
 
         let decodedBase64
-        if (needsDecrypt(albumId, originalName)) {
+        // ★ 用 chapterId 判断是否需要解密
+        if (needsDecrypt(chapterId, originalName)) {
           try {
             const blob = new Blob([buffer])
             const img = await blobToImage(blob)
-            const canvas = imageCutter.cutImage(img, albumId, originalName)
+            // ★★★ 关键修复：传 chapterId 给 cutImage ★★★
+            // ImageCutter 内部用 (id + path) 算 MD5 决定切片层数
+            // 传 albumId 会导致切片错误 → 解密乱码
+            const canvas = imageCutter.cutImage(img, chapterId, originalName)
             const dataUrl = canvas.toDataURL('image/png')
             decodedBase64 = dataUrl.split(',')[1]
           } catch (err) {
@@ -503,7 +515,6 @@ class DownloadManager {
       }
     }
 
-    // 章节完成 → 进度到该章结束位置
     task.progress = Math.round(((chapterIndex + 1) / totalChapters) * 90)
     task.message = `第 ${task.currentChapterIndex}/${totalChapters} 章 完成`
     this._notifyImmediate()
@@ -568,6 +579,9 @@ class DownloadManager {
     await this._saveImmediate()
   }
 
+  /**
+   * 打开输出：原生打开文件夹，Web 下载 ZIP
+   */
   async openOutput(taskId) {
     const task = this.tasks.find((t) => t.id === taskId)
     if (!task) throw new Error('任务不存在')
