@@ -21,6 +21,11 @@ const router = createRouter({
       name: 'download-detail',
       component: () => import('@/views/DownloadDetailView.vue'),
     },
+    {
+      path: '/setting/LocalDataSettings',
+      name: 'setting-local-data',
+      component: () => import('@/components/setting/LocalDataSettings.vue'),
+    },
   ],
   scrollBehavior(to, from, savedPosition) {
     return savedPosition || { top: 0 }

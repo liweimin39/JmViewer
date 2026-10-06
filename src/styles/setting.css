@@ -2,43 +2,47 @@
   width: 80%;
   margin: auto;
 }
+
 .title {
   font-size: 35px;
   font-weight: 400;
   margin-top: 20px;
   color: #ff77a5;
 }
+
 .options {
   height: auto;
   border-left: 5px solid #ff77a5;
   margin-top: 10px;
-}
-.option {
-  width: 100%;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  padding-left: 20px;
-  font-size: 20px;
-  color: #5e2739;
-}
-.option a {
-  color: #5e2739;
-  margin-left: 20px;
-}
-@media screen and (max-width: 800px) {
-  .setting-body {
-    width: 90%;
-  }
-}
-@media screen and (max-width: 600px) {
-  .option {
-    flex-wrap: wrap;
-    height: 80px;
-  }
+  padding: 8px 0;
 }
 
-/* 设置页操作按钮 */
+/* ============ 普通选项 ============ */
+.option {
+  width: 100%;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 20px;
+  font-size: 18px;
+  color: #5e2739;
+  box-sizing: border-box;
+}
+
+.option-label {
+  flex-shrink: 0;
+  color: #5e2739;
+}
+
+.option-link {
+  color: #5e2739;
+  text-decoration: underline;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
 .setting-action-btn {
   padding: 8px 16px;
   background: #ff7aa2;
@@ -47,14 +51,190 @@
   border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
-  margin-left: 12px;
   transition: background 0.15s;
+  flex-shrink: 0;
 }
 .setting-action-btn:hover {
   background: #ff5a88;
 }
 
-/* ============ 日志面板 ============ */
+/* ============ 可点击选项 ============ */
+.option-clickable {
+  cursor: pointer;
+  justify-content: space-between;
+  border-radius: 8px;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.option-clickable:hover {
+  background: #fff0f5;
+}
+.option-clickable:active {
+  background: #ffe0eb;
+}
+.option-arrow {
+  flex-shrink: 0;
+  color: #ff7aa2;
+  transition: transform 0.15s;
+}
+.option-clickable:hover .option-arrow {
+  transform: translateX(2px);
+}
+
+/* ============ 返回栏 ============ */
+.page-back-bar {
+  margin-top: 16px;
+  margin-bottom: 4px;
+}
+.page-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px 6px 6px;
+  background: transparent;
+  border: none;
+  color: #ff7aa2;
+  font-size: 15px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.page-back-btn:hover {
+  background: #fff0f5;
+}
+.page-back-btn:active {
+  background: #ffe0eb;
+}
+.page-back-btn svg {
+  flex-shrink: 0;
+}
+
+/* ============ 数据管理区块（LocalDataSettings 页面） ============ */
+.option-block {
+  display: block;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f5f5f5;
+}
+.option-block:last-child {
+  border-bottom: none;
+}
+
+.block-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ff7aa2;
+  margin-bottom: 12px;
+  padding-left: 10px;
+  border-left: 3px solid #ff7aa2;
+}
+
+.stats-line {
+  margin: 0;
+  color: #555;
+  font-size: 15px;
+}
+.section-tip {
+  margin: 8px 0 12px;
+  color: #888;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.btn-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.settings-btn {
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #333;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.settings-btn:hover:not(:disabled) {
+  background: #f5f5f5;
+}
+.settings-btn.primary {
+  background: #ff7aa2;
+  color: #fff;
+  border-color: #ff7aa2;
+}
+.settings-btn.primary:hover:not(:disabled) {
+  background: #ff5a88;
+}
+.settings-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 改名 */
+.username-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.username-label {
+  color: #555;
+  font-size: 15px;
+}
+.username-value {
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.edit-name-btn {
+  padding: 4px 12px;
+  font-size: 13px;
+  background: #fff;
+  color: #ff7aa2;
+  border: 1px solid #ffdce6;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.edit-name-btn:hover {
+  background: #fff0f5;
+  border-color: #ff7aa2;
+}
+.username-edit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.username-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 15px;
+  box-sizing: border-box;
+  outline: none;
+}
+.username-input:focus {
+  border-color: #ff7aa2;
+}
+.username-edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* =================================================== */
+/*                 开发者日志面板                       */
+/* =================================================== */
+
 .logs-overlay {
   position: fixed;
   inset: 0;
@@ -223,4 +403,60 @@
 .logs-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* ============ 移动端适配 ============ */
+@media screen and (max-width: 800px) {
+  .setting-body {
+    width: 90%;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .title {
+    font-size: 28px;
+  }
+  .option {
+    font-size: 16px;
+    padding: 10px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .option-link {
+    font-size: 14px;
+  }
+  .option-clickable {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .option-block {
+    padding: 12px 16px;
+  }
+
+  /* 日志面板移动端 */
+  .logs-overlay {
+    padding: 8px;
+  }
+  .logs-panel {
+    height: 95vh;
+    max-height: none;
+    border-radius: 10px;
+  }
+  .logs-info {
+    padding: 6px 14px;
+    font-size: 11px;
+  }
+  .logs-list {
+    font-size: 11px;
+  }
+  .logs-actions {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
+  .logs-btn {
+    font-size: 13px;
+    padding: 8px;
+  }
 }

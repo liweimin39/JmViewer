@@ -2,11 +2,8 @@
 import { ref, reactive } from 'vue'
 import { userApi } from '@/api/UserApi.js'
 import { useUser } from '@/composables/useUser.js'
-import LocalAuthForm from './LocalAuthForm.vue'
 
-const showLocalAuth = ref(false)
-
-const emit = defineEmits(['logged-in'])
+const emit = defineEmits(['logged-in', 'cancel'])
 const { setUser } = useUser()
 
 const activeTab = ref('login')
@@ -94,13 +91,27 @@ async function handleForgot() {
 </script>
 
 <template>
-  <LocalAuthForm
-    v-if="showLocalAuth"
-    @created="$emit('logged-in')"
-    @cancel="showLocalAuth = false"
-  />
+  <!-- ★ 顶部返回按钮 -->
+  <div class="auth-back-bar">
+    <button class="auth-back-btn" @click="emit('cancel')" aria-label="返回">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        width="22"
+        height="22"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <polyline points="15 18 9 12 15 6" />
+      </svg>
+      <span>返回本地账号</span>
+    </button>
+  </div>
 
-  <div v-else class="auth-container">
+  <div class="auth-container">
     <div class="auth-tabs">
       <span class="auth-tab" :class="{ active: activeTab === 'login' }" @click="activeTab = 'login'"
         >登录</span
@@ -184,14 +195,6 @@ async function handleForgot() {
         ></span>
       </button>
       <div class="msg" :style="{ color: forgotState.color }">{{ forgotState.msg }}</div>
-    </div>
-
-    <!-- ★ 挪到三个表单之外，常驻显示 -->
-    <div class="local-entry">
-      <span class="local-entry-divider">或</span>
-      <button class="local-entry-btn" @click="showLocalAuth = true">
-        使用本地账号（离线使用）
-      </button>
     </div>
   </div>
 </template>
