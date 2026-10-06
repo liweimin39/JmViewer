@@ -98,38 +98,6 @@ function invertSelection() {
   selectedIds.value = set
 }
 
-/** 并发拉取选中章节的完整数据（含 images） */
-async function fetchChapterData(ids, concurrency = 3) {
-  const results = []
-  let idx = 0
-  const total = ids.length
-
-  async function worker() {
-    while (idx < total) {
-      const i = idx++
-      const id = ids[i]
-      try {
-        const data = await jmApi.getComicChapter(id)
-        const src = series.value.find((s) => String(s.id) === String(id))
-        results.push({
-          id,
-          name: src?.name || data.name || `第${i + 1}章`,
-          images: data.images || [],
-        })
-      } catch (e) {
-        console.warn(`拉取章节 ${id} 失败:`, e)
-      }
-    }
-  }
-
-  const workers = Array.from({ length: Math.min(concurrency, total) }, () => worker())
-  await Promise.all(workers)
-
-  const orderMap = new Map(ids.map((id, i) => [String(id), i]))
-  results.sort((a, b) => orderMap.get(String(a.id)) - orderMap.get(String(b.id)))
-  return results
-}
-
 async function startDownload() {
   if (preparing.value) return
   const selected = series.value.filter((ch) => selectedIds.value.has(ch.id))
@@ -140,17 +108,14 @@ async function startDownload() {
 
   preparing.value = true
   try {
-    const ids = selected.map((ch) => ch.id)
-    const fullChapters = await fetchChapterData(ids)
+    // ★ 只传章节基本信息（id + name），不预先请求所有 API
+    const chapterList = selected.map((ch) => ({
+      id: ch.id,
+      name: ch.name || '',
+    }))
 
-    const validChapters = fullChapters.filter((c) => c.images && c.images.length > 0)
-    if (validChapters.length === 0) {
-      alert('章节数据拉取失败或没有图片')
-      return
-    }
-
-    await downloadManager.addTask(album.value, validChapters)
-    alert(`已添加下载任务：${validChapters.length} 章`)
+    await downloadManager.addTask(album.value, chapterList)
+    alert(`已添加下载任务：${chapterList.length} 章`)
     router.push('/downloads')
   } catch (e) {
     alert(e?.message || '添加下载失败')
@@ -207,7 +172,7 @@ onMounted(loadAll)
         </div>
       </div>
 
-      <!-- 中部：工具栏（去掉搜索框） -->
+      <!-- 中部：工具栏 -->
       <div class="dl-toolbar">
         <div class="dl-toolbar-actions">
           <button class="dl-tool-btn" @click="selectAll">全选</button>
@@ -251,7 +216,7 @@ onMounted(loadAll)
           <div class="dl-selected-count">
             已选 <strong>{{ selectedIds.size }}</strong> / {{ series.length }} 章
           </div>
-          <div class="dl-hint">下载后可导出为 ZIP</div>
+          <div class="dl-hint">下载后可在"我的下载"查看</div>
         </div>
         <button
           class="dl-start-btn"

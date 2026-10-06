@@ -158,6 +158,11 @@ class DownloadManager {
     })
   }
 
+  /**
+   * 添加下载任务
+   * @param {Object} album 漫画 { id, name, author }
+   * @param {Array} chapters 章节列表 [{ id, name }]（不含 images）
+   */
   async addTask(album, chapters) {
     const taskId = `dl_${album.id}_${Date.now()}`
 
@@ -175,7 +180,7 @@ class DownloadManager {
       albumAuthor: Array.isArray(album.author) ? album.author.join(' & ') : album.author || '',
       chapterIds: chapters.map((c) => c.id),
       chapterNames: chapters.map((c) => c.name || ''),
-      totalImages: chapters.reduce((sum, c) => sum + (c.images?.length || 0), 0),
+      totalImages: 0, // ★ 动态累加
       downloadedImages: 0,
       status: DownloadStatus.PENDING,
       message: '等待下载',
@@ -224,6 +229,7 @@ class DownloadManager {
       task.status = DownloadStatus.DOWNLOADING
       task.message = '准备下载...'
       task.downloadedImages = 0
+      task.totalImages = 0
       task.error = null
       task.currentChapterIndex = 0
       task.totalChapters = chapters.length
@@ -233,16 +239,57 @@ class DownloadManager {
       this._notifyImmediate()
       await this._saveImmediate()
 
-      // 下载所有章节（原生和 Web 都做，解密图存到 Comics/）
+      // ★★★ 按章节顺序：请求 API → 下载图片 ★★★
       for (let ci = 0; ci < chapters.length; ci++) {
         if (task.status === DownloadStatus.CANCELLED) throw new Error(SIGNAL_CANCEL)
         if (task.status === DownloadStatus.PAUSED) throw new Error(SIGNAL_PAUSE)
-        await this._downloadChapter(task, chapters[ci], ci, chapters.length)
+
+        const chapterMeta = chapters[ci]
+        const chapterId = chapterMeta.id
+
+        // ========== ① 请求该章节 API ==========
+        task.currentChapterIndex = ci + 1
+        task.currentChapterName = chapterMeta.name || `第${ci + 1}章`
+        task.currentChapterImageIndex = 0
+        task.currentChapterImageTotal = 0
+        task.message = `获取第 ${ci + 1}/${chapters.length} 章数据...`
+        this._notifyImmediate()
+
+        let chapterData
+        try {
+          chapterData = await jmApi.getComicChapter(chapterId)
+        } catch (e) {
+          logger.error(`[Download] 获取章节 ${chapterId} 失败:`, e)
+          throw new Error(`获取章节 ${chapterId} 失败`)
+        }
+
+        const images = Array.isArray(chapterData?.images) ? chapterData.images : []
+
+        if (images.length === 0) {
+          logger.warn(`[Download] 章节 ${chapterId} 无图片，跳过`)
+          continue
+        }
+
+        // 补全章节名（API 返回的名字可能更完整）
+        if (chapterData.name) {
+          task.currentChapterName = chapterData.name
+        }
+        task.currentChapterImageTotal = images.length
+        task.totalImages += images.length
+        this._notifyImmediate()
+
+        // ========== ② 下载该章节所有图片 ==========
+        const chapterFull = {
+          id: chapterId,
+          name: task.currentChapterName,
+          images,
+        }
+        await this._downloadChapter(task, chapterFull, ci, chapters.length)
       }
 
-      // ★ 按平台分支
+      // ========== 完成 ==========
       if (Capacitor.isNativePlatform()) {
-        // ====== 原生：不打包，直接完成 ======
+        // 原生：不打包，直接完成
         const decodedDir = offlineStorage.decodedAlbumPath(task.albumId)
 
         let totalSize = 0
@@ -263,7 +310,7 @@ class DownloadManager {
 
         logger.info('[Download] 原生任务完成:', task.id, '→', decodedDir)
       } else {
-        // ====== Web：打包 ZIP ======
+        // Web：打包 ZIP
         task.status = DownloadStatus.PACKAGING
         task.message = '正在打包 ZIP...'
         task.progress = 95
@@ -272,9 +319,21 @@ class DownloadManager {
 
         const { zipChapters, getZipFileName } = await import('./zipHelper.js')
 
+        // ★ 打包时需要重建章节数据（含 images）——从磁盘读
+        const zipChaptersData = []
+        for (const ch of chapters) {
+          const chapterDir = offlineStorage.decodedChapterPath(task.albumId, ch.id)
+          const files = await offlineStorage.listDir(chapterDir)
+          zipChaptersData.push({
+            id: ch.id,
+            name: ch.name,
+            images: files.map((f) => f.name).filter((n) => !n.startsWith('.')),
+          })
+        }
+
         const blob = await zipChapters(
           { id: task.albumId, name: task.albumName, author: task.albumAuthor },
-          chapters,
+          zipChaptersData,
           (percent, msg) => {
             task.progress = 95 + Math.round(percent * 0.05)
             task.message = msg
@@ -291,10 +350,8 @@ class DownloadManager {
         task.fileSize = blob.size
         task.completedAt = new Date().toISOString()
 
-        // 缓存 blob 到内存（供本次会话下载），同时写磁盘
         task._zipBlob = blob
 
-        // 写入 Tmp 目录（可选，刷新后可从磁盘读）
         try {
           const dataUrl = await blobToBase64(blob)
           const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
@@ -354,6 +411,10 @@ class DownloadManager {
     }
   }
 
+  /**
+   * 下载单个章节的所有图片
+   * 进度 = 已完成章节贡献 + 当前章节进度贡献（单调递增）
+   */
   async _downloadChapter(task, chapter, chapterIndex, totalChapters) {
     const albumId = task.albumId
     const chapterId = chapter.id
@@ -370,6 +431,10 @@ class DownloadManager {
     task.message = `第 ${task.currentChapterIndex}/${totalChapters} 章 · ${task.currentChapterName}`
     this._notifyImmediate()
 
+    // 进度基准：已完成章节
+    const chapterBase = (chapterIndex / totalChapters) * 90
+    const chapterContribution = 90 / totalChapters
+
     for (let i = 0; i < images.length; i++) {
       if (task.status === DownloadStatus.CANCELLED) throw new Error(SIGNAL_CANCEL)
       if (task.status === DownloadStatus.PAUSED) throw new Error(SIGNAL_PAUSE)
@@ -381,14 +446,16 @@ class DownloadManager {
 
       task.currentChapterImageIndex = i + 1
 
+      // ★ 每张更新进度
+      const inChapter = (i + 1) / images.length
+      task.progress = Math.round(chapterBase + inChapter * chapterContribution)
+
       // 断点续传
       const decodedExists = await offlineStorage.exists(decodedPath)
       if (decodedExists) {
         const size = await offlineStorage.getSize(decodedPath)
         if (size > 100) {
           task.downloadedImages++
-          const total = task.totalImages || 1
-          task.progress = Math.round((task.downloadedImages / total) * 90)
           this._notify()
           continue
         }
@@ -424,8 +491,6 @@ class DownloadManager {
         await offlineStorage.writeBase64(decodedPath, decodedBase64)
 
         task.downloadedImages++
-        const total = task.totalImages || 1
-        task.progress = Math.round((task.downloadedImages / total) * 90)
         this._notify()
       } catch (e) {
         if (e.message === SIGNAL_CANCEL || e.message === SIGNAL_PAUSE) throw e
@@ -438,6 +503,8 @@ class DownloadManager {
       }
     }
 
+    // 章节完成 → 进度到该章结束位置
+    task.progress = Math.round(((chapterIndex + 1) / totalChapters) * 90)
     task.message = `第 ${task.currentChapterIndex}/${totalChapters} 章 完成`
     this._notifyImmediate()
   }
@@ -501,17 +568,12 @@ class DownloadManager {
     await this._saveImmediate()
   }
 
-  /**
-   * ★ 已完成任务点击
-   * 原生：打开文件夹
-   * Web：触发 ZIP 下载
-   */
   async openOutput(taskId) {
     const task = this.tasks.find((t) => t.id === taskId)
     if (!task) throw new Error('任务不存在')
     if (task.status !== DownloadStatus.COMPLETED) throw new Error('任务尚未完成')
 
-    // ====== Web：触发 ZIP 下载 ======
+    // Web：触发 ZIP 下载
     if (!Capacitor.isNativePlatform()) {
       let blob = task._zipBlob
 
@@ -542,11 +604,10 @@ class DownloadManager {
       return { type: 'download', filename: a.download }
     }
 
-    // ====== 原生：打开文件夹 ======
+    // 原生：打开文件夹
     if (!task.outputPath) throw new Error('输出路径丢失')
 
     const fullUri = await offlineStorage.getUri(task.outputPath)
-
     const { registerPlugin } = await import('@capacitor/core')
     const StoragePermission = registerPlugin('StoragePermission')
     await StoragePermission.openFolder({ path: fullUri })

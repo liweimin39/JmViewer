@@ -135,13 +135,14 @@ function formatTime(iso) {
     </div>
 
     <div class="di-actions">
-      <!-- 已完成：原生 = 文件夹图标，Web = 下载图标 -->
+      <!-- 已完成：原生 = 文件夹，Web = 下载 -->
       <button
         v-if="isCompleted"
         class="di-btn download"
         @click="emit('download', task.id)"
         :title="isNative ? '打开文件夹' : '下载 ZIP'"
       >
+        <!-- 文件夹图标（原生） -->
         <svg
           v-if="isNative"
           xmlns="http://www.w3.org/2000/svg"
@@ -156,6 +157,7 @@ function formatTime(iso) {
         >
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
         </svg>
+        <!-- 下载图标（Web） -->
         <svg
           v-else
           xmlns="http://www.w3.org/2000/svg"
@@ -174,30 +176,81 @@ function formatTime(iso) {
         </svg>
       </button>
 
+      <!-- 进行中：暂停 -->
       <button v-if="isActive" class="di-btn pause" @click="emit('pause', task.id)" title="暂停">
-        ⏸
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="currentColor"
+          stroke="none"
+        >
+          <rect x="6" y="4" width="4" height="16" rx="1" />
+          <rect x="14" y="4" width="4" height="16" rx="1" />
+        </svg>
       </button>
 
+      <!-- 已暂停/失败：继续 -->
       <button v-if="isPaused" class="di-btn resume" @click="emit('resume', task.id)" title="继续">
-        ▶
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="currentColor"
+          stroke="none"
+        >
+          <polygon points="6 4 20 12 6 20" />
+        </svg>
       </button>
 
+      <!-- 进行中/已暂停：取消 -->
       <button
         v-if="isActive || isPaused"
         class="di-btn cancel"
         @click="emit('cancel', task.id)"
         title="取消"
       >
-        ✕
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
       </button>
 
+      <!-- 已完成/已取消：删除 -->
       <button
         v-if="isCompleted || task.status === DownloadStatus.CANCELLED"
         class="di-btn remove"
         @click="emit('remove', task.id)"
         title="删除"
       >
-        🗑
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+          <path d="M10 11v6M14 11v6" />
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+        </svg>
       </button>
     </div>
   </div>

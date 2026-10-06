@@ -107,7 +107,6 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="filteredTasks.length === 0" class="dl-empty">
-      <span class="dl-empty-icon">📥</span>
       <p>暂无下载任务</p>
     </div>
 

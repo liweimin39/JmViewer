@@ -8,20 +8,24 @@ const props = defineProps({
 })
 
 const coverRef = ref(null)
+const coverUrl = jmApi.getCoverImageURL(props.comic.id)
+const DEFAULT_COVER = '/image/cover_default.jpg'
 
 onMounted(() => {
   if (coverRef.value) lazyLoader.addCover(coverRef.value)
 })
+
+function onImgError(e) {
+  // 防止无限循环（占位图也失败）
+  if (e.target.src.includes('cover_default')) return
+  e.target.src = DEFAULT_COVER
+}
 </script>
 
 <template>
   <RouterLink class="comic-item" :to="`/chapter/${comic.id}`">
-    <span
-      class="cover"
-      ref="coverRef"
-      :data-src="jmApi.getCoverImageURL(comic.id)"
-    >
-      <img alt="封面" />
+    <span class="cover" ref="coverRef" :data-src="coverUrl">
+      <img alt="封面" @error="onImgError" />
       <div class="tags"></div>
     </span>
     <h1 class="c-title">{{ comic.name }}</h1>

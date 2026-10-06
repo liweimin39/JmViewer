@@ -16,6 +16,15 @@ const favorites = ref([])
 const history = ref([])
 const loading = ref(false)
 
+// ★ 封面占位图
+const DEFAULT_COVER = '/image/cover_default.jpg'
+
+function onImgError(e) {
+  if (e.target.src.includes('cover_default')) return
+  e.target.onerror = null
+  e.target.src = DEFAULT_COVER
+}
+
 const initial = computed(() => (props.user.username || '?').slice(0, 1).toUpperCase())
 const createdDate = computed(() => {
   if (!props.user.createdAt) return ''
@@ -135,6 +144,7 @@ onMounted(refreshAll)
       <template v-else-if="currentTab === 'favorites'">
         <div v-if="favoriteComics.length === 0" class="list-empty-container">
           <p class="list-empty-text">此账号暂无本地收藏</p>
+          <button class="empty-action-btn" @click="onLogout">切换到其他账号</button>
         </div>
         <div v-else class="comics-cr local-comics">
           <ComicCard v-for="c in favoriteComics" :key="c.id" :comic="c" />
@@ -144,6 +154,7 @@ onMounted(refreshAll)
       <template v-else-if="currentTab === 'history'">
         <div v-if="historyComics.length === 0" class="list-empty-container">
           <p class="list-empty-text">此账号暂无浏览记录</p>
+          <button class="empty-action-btn" @click="onLogout">切换到其他账号</button>
         </div>
         <div v-else class="history-list">
           <RouterLink
@@ -153,7 +164,12 @@ onMounted(refreshAll)
             :to="`/chapter/${item.id}`"
           >
             <div class="history-cover">
-              <img :src="jmApi.getCoverImageURL(item.id)" alt="cover" loading="lazy" />
+              <img
+                :src="jmApi.getCoverImageURL(item.id)"
+                alt="cover"
+                loading="lazy"
+                @error="onImgError"
+              />
             </div>
             <div class="history-info">
               <h3 class="history-name">{{ item.name }}</h3>

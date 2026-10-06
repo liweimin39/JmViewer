@@ -8,14 +8,23 @@ const emit = defineEmits(['read', 'download-all'])
 
 const coverUrl = computed(() => jmApi.getCoverImageURL(props.album.id))
 const authorText = computed(() => (props.album.author || []).join(' & '))
+
+// ★ 封面占位图
+const DEFAULT_COVER = '/image/cover_default.jpg'
+
+function onCoverError(e) {
+  if (e.target.src.includes('cover_default')) return
+  e.target.onerror = null
+  e.target.src = DEFAULT_COVER
+}
 </script>
 
 <template>
   <div class="head">
-    <!-- ★ 上半区：封面 + 漫画信息 + 开始阅读 -->
+    <!-- 上半区：封面 + 漫画信息 + 开始阅读 -->
     <div class="head-main">
       <div class="cover">
-        <img :src="coverUrl" alt="" />
+        <img :src="coverUrl" alt="" @error="onCoverError" />
       </div>
       <div class="comic-info">
         <h1 class="title">{{ album.name }}</h1>
@@ -34,12 +43,12 @@ const authorText = computed(() => (props.album.author || []).join(' & '))
           <div class="introduction">{{ album.description }}</div>
         </div>
 
-        <!-- ★ 开始阅读放在漫画信息末尾 -->
+        <!-- 开始阅读放在漫画信息末尾 -->
         <div class="start-read" @click="emit('read')">开始阅读</div>
       </div>
     </div>
 
-    <!-- ★ 下半区：下载 + 收藏 + 追踪 -->
+    <!-- 下半区：下载 + 收藏 + 追踪 -->
     <div class="head-actions">
       <div class="download-btn" @click="emit('download-all')">
         <svg
