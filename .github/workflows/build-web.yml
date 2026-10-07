@@ -1,4 +1,48 @@
+name: Build Web (Static)
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Web
+        run: npm run build
+
+      - name: Inspect dist
+        run: |
+          echo ">>> dist 目录内容:"
+          ls -la dist/
+          echo ">>> 总大小:"
+          du -sh dist/
+
+      - name: Package dist
+        run: |
+          mkdir -p out
+          cd dist
+          zip -r "../out/JmViewer-web-${GITHUB_SHA::7}.zip" .
+          cd ..
+          ls -lh out/
+
+      - name: Upload Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmviewer-web-dist
+          path: out/*.zip
+          retention-days: 30

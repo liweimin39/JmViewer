@@ -1,3 +1,5 @@
+name: Build Android APK
+
 on:
   push:
     branches: [main]
@@ -11,3 +13,109 @@ on:
         options:
           - debug
           - release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Web
+        run: npm run build
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      # ---------- 判断是否为 Release 构建 ----------
+      - name: Decide build type
+        id: flag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.build_type }}" == "release" ]]; then
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_release=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ---------- Debug 构建（默认）----------
+      - name: Build Debug APK
+        if: steps.flag.outputs.is_release == 'false'
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+
+      # ---------- Release 构建 ----------
+      - name: Decode Keystore
+        if: steps.flag.outputs.is_release == 'true'
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+
+      - name: Verify keystore alias
+        if: steps.flag.outputs.is_release == 'true'
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if ! keytool -list -keystore android/app/release.keystore \
+               -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+            echo "::error::keystore 中不存在别名 '$KEY_ALIAS'"
+            keytool -list -keystore android/app/release.keystore -storepass "$KEYSTORE_PASSWORD"
+            exit 1
+          fi
+          echo "alias '$KEY_ALIAS' 校验通过"
+
+      - name: Build Release APK
+        if: steps.flag.outputs.is_release == 'true'
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$PWD/app/release.keystore \
+            -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+
+      # ---------- 收集产物 ----------
+      - name: Collect Debug APK
+        if: steps.flag.outputs.is_release == 'false'
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/debug/*.apk \
+             "out/JmViewer-debug-${GITHUB_SHA::7}.apk"
+          ls -lh out/
+
+      - name: Collect Release APK
+        if: steps.flag.outputs.is_release == 'true'
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/*.apk \
+             "out/JmViewer-release-${GITHUB_SHA::7}.apk"
+          ls -lh out/
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ steps.flag.outputs.is_release == 'true' && 'release' || 'debug' }}
+          path: out/*.apk
+          retention-days: 30
