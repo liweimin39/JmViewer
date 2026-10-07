@@ -5,14 +5,11 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      build_type:
-        description: '构建类型（release 需配置 keystore secrets）'
+      sign_release:
+        description: '是否用 keystore 签名构建 Release APK（true=签名 Release，false=Debug）'
         required: true
-        default: debug
-        type: choice
-        options:
-          - debug
-          - release
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -43,11 +40,11 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      # ---------- 判断是否为 Release 构建 ----------
+      # ---------- 判断构建类型 ----------
       - name: Decide build type
         id: flag
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.build_type }}" == "release" ]]; then
+          if [[ "${{ inputs.sign_release }}" == "true" ]]; then
             echo "is_release=true" >> $GITHUB_OUTPUT
           else
             echo "is_release=false" >> $GITHUB_OUTPUT
@@ -61,7 +58,7 @@ jobs:
           chmod +x ./gradlew
           ./gradlew assembleDebug
 
-      # ---------- Release 构建 ----------
+      # ---------- Release 签名构建 ----------
       - name: Decode Keystore
         if: steps.flag.outputs.is_release == 'true'
         run: |
@@ -81,7 +78,7 @@ jobs:
           fi
           echo "alias '$KEY_ALIAS' 校验通过"
 
-      - name: Build Release APK
+      - name: Build Release APK (signed)
         if: steps.flag.outputs.is_release == 'true'
         working-directory: android
         env:
@@ -113,9 +110,11 @@ jobs:
              "out/JmViewer-release-${GITHUB_SHA::7}.apk"
           ls -lh out/
 
+      # compression-level: 0 表示不再对 APK 做二次压缩
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: apk-${{ steps.flag.outputs.is_release == 'true' && 'release' || 'debug' }}
           path: out/*.apk
           retention-days: 30
+          compression-level: 0

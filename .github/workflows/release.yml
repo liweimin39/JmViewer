@@ -81,6 +81,7 @@ jobs:
           name: apk
           path: out/*.apk
           retention-days: 7
+          compression-level: 0
 
   # ==================== iOS ====================
   ios:
@@ -149,6 +150,7 @@ jobs:
           name: ipa
           path: out/*.ipa
           retention-days: 7
+          compression-level: 0
 
   # ==================== Web ====================
   web:
@@ -167,19 +169,20 @@ jobs:
       - name: Build Web
         run: npm run build
 
+      # 只有一层 zip：dist.zip
       - name: Package dist & Upload
         run: |
-          mkdir -p out
           cd dist
-          zip -r "../out/JmViewer-web-${{ github.ref_name }}.zip" .
+          zip -r "../dist.zip" .
           cd ..
-          ls -lh out/
+          ls -lh dist.zip
 
       - uses: actions/upload-artifact@v4
         with:
           name: web
-          path: out/*.zip
+          path: dist.zip
           retention-days: 7
+          compression-level: 0
 
   # ==================== Release ====================
   release:
@@ -197,7 +200,7 @@ jobs:
           echo ">>> 待发布文件："
           ls -lh artifacts/
 
-      # ★ 先删掉同名 Release，避免旧文件残留（tag 保留）
+      # 先删掉同名 Release，避免旧文件残留（tag 保留）
       - name: Delete existing release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

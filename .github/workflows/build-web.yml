@@ -32,17 +32,21 @@ jobs:
           echo ">>> 总大小:"
           du -sh dist/
 
+      # 只有一层 zip：把 dist/ 的内容压成 dist.zip
       - name: Package dist
         run: |
-          mkdir -p out
           cd dist
-          zip -r "../out/JmViewer-web-${GITHUB_SHA::7}.zip" .
+          zip -r "../dist.zip" .
           cd ..
-          ls -lh out/
+          ls -lh dist.zip
+          echo ">>> zip 内顶层:"
+          unzip -l dist.zip | head -20
 
+      # compression-level: 0，避免 zip 被再次压缩嵌套
       - name: Upload Web Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: jmviewer-web-dist
-          path: out/*.zip
+          name: web-dist
+          path: dist.zip
           retention-days: 30
+          compression-level: 0

@@ -25,7 +25,7 @@ jobs:
       - name: Build Web
         run: npm run build
 
-      # ★ 只在 ios/ 完全不存在时才生成
+      # 只在 ios/ 完全不存在时才生成
       - name: Ensure iOS platform exists
         run: |
           if [ ! -d "ios/App/App.xcodeproj" ]; then
@@ -71,9 +71,11 @@ jobs:
           zip -r "out/JmViewer-ios-unsigned-${GITHUB_SHA::7}.ipa" Payload
           ls -lh out/
 
+      # compression-level: 0，IPA 本身已是 zip，不再二次压缩
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: jmviewer-ios-ipa-unsigned
           path: out/*.ipa
           retention-days: 30
+          compression-level: 0
