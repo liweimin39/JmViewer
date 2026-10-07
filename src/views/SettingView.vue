@@ -33,10 +33,10 @@ function goLocalData() {
         <span class="option-label">前往此项目的 github：</span>
         <a
           class="option-link"
-          href="https://github.com/liweimin39/Jmcomic-webUI"
+          href="https://github.com/liweimin39/JmViewer/"
           target="_blank"
           rel="noopener"
-          >https://github.com/liweimin39/Jmcomic-webUI</a
+          >liweimin39/JmViewer/</a
         >
       </div>
       <div class="option">
@@ -46,7 +46,7 @@ function goLocalData() {
           href="https://github.com/zrhcdy/Jmcomic-webUI"
           target="_blank"
           rel="noopener"
-          >https://github.com/zrhcdy/Jmcomic-webUI</a
+          >zrhcdy/Jmcomic-webUI</a
         >
       </div>
 
