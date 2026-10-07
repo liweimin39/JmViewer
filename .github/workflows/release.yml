@@ -197,6 +197,15 @@ jobs:
           echo ">>> 待发布文件："
           ls -lh artifacts/
 
+      # ★ 先删掉同名 Release，避免旧文件残留（tag 保留）
+      - name: Delete existing release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete "${{ github.ref_name }}" --yes --cleanup-tag=false 2>/dev/null \
+            && echo "已删除旧 Release" \
+            || echo "无旧 Release，跳过"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
