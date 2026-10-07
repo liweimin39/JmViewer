@@ -1,0 +1,208 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的 tag（如 v1.0.0，必须已存在）'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  # ==================== Android ====================
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Web
+        run: npm run build
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+
+      - name: Verify keystore alias
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if ! keytool -list -keystore android/app/release.keystore \
+               -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+            echo "::error::keystore 中不存在别名 '$KEY_ALIAS'"
+            keytool -list -keystore android/app/release.keystore -storepass "$KEYSTORE_PASSWORD"
+            exit 1
+          fi
+          echo "alias '$KEY_ALIAS' 校验通过"
+
+      - name: Build Release APK
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$PWD/app/release.keystore \
+            -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+
+      - name: Rename & Upload
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/*.apk \
+             "out/JmViewer-android-${{ github.ref_name }}.apk"
+          ls -lh out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: out/*.apk
+          retention-days: 7
+
+  # ==================== iOS ====================
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Web
+        run: npm run build
+
+      - name: Ensure iOS platform exists
+        run: |
+          if [ ! -d "ios/App/App.xcodeproj" ]; then
+            echo ">>> iOS 工程缺失，重新生成"
+            rm -rf ios
+            npx cap add ios
+          else
+            echo ">>> 检测到 iOS 工程已存在，跳过生成"
+          fi
+          ls -la ios/App/
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      - name: Build iOS (no codesign)
+        working-directory: ios/App
+        run: |
+          if [ -f "Podfile" ]; then
+            echo ">>> CocoaPods 模式"
+            sudo gem install cocoapods
+            pod install
+            WORKSPACE_FLAG="-workspace App.xcworkspace"
+          else
+            echo ">>> SPM 模式（无 Podfile）"
+            WORKSPACE_FLAG="-project App.xcodeproj"
+          fi
+
+          xcodebuild \
+            $WORKSPACE_FLAG \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package IPA & Upload
+        run: |
+          mkdir -p Payload out
+          cp -R ios/App/build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -r "out/JmViewer-ios-${{ github.ref_name }}-unsigned.ipa" Payload
+          ls -lh out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ipa
+          path: out/*.ipa
+          retention-days: 7
+
+  # ==================== Web ====================
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Web
+        run: npm run build
+
+      - name: Package dist & Upload
+        run: |
+          mkdir -p out
+          cd dist
+          zip -r "../out/JmViewer-web-${{ github.ref_name }}.zip" .
+          cd ..
+          ls -lh out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: out/*.zip
+          retention-days: 7
+
+  # ==================== Release ====================
+  release:
+    needs: [android, ios, web]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List files
+        run: |
+          echo ">>> 待发布文件："
+          ls -lh artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: artifacts/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
