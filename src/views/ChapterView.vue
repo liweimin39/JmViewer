@@ -255,7 +255,7 @@ onBeforeUnmount(() => {
 .chapter-page-error {
   padding: 100px 20px;
   text-align: center;
-  color: #d9534f;
+  color: var(--theme-danger-soft);
   font-size: 18px;
 }
 </style>

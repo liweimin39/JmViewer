@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            http-equiv="Cache-Control"
+            content="max-age=3600, must-revalidate"
+        />
+        <meta id="wx-title" property="og:title" content="JmViewer" />
+        <meta id="wx-description" property="og:description" content="Yuan" />
+        <meta id="wx-image" property="og:image" content="./image/cover.png" />
+        <meta property="og:type" content="website" />
+        <title>详情</title>
+        <link rel="stylesheet" href="./style/basic.css" />
+        <link rel="stylesheet" href="./style/chapter.css" />
+    </head>
+    <body>
+        <script>
+            // 应用已保存的主题，避免页面先以默认主题渲染再变色
+            (function () {
+                const theme = localStorage.getItem("app_theme");
+                if (theme) document.documentElement.classList.add(theme + "-theme");
+            })();
+        </script>
+        <div class="root">
+            <nav class="nav">
+                <div class="page-list-btn">
+                    <div class="btn-inner"></div>
+                    <div class="btn-inner"></div>
+                    <div class="btn-inner"></div>
+                </div>
+                <div class="logo">JmViewer</div>
+                <div class="pages">
+                    <div class="page-list">
+                        <a class="p-item" href="./index.html">首页</a>
+                        <a class="p-item" href="./latest.html">最新</a>
+                        <a class="p-item" href="./categories.html">分类</a>
+                    </div>
+                </div>
+                <div class="search">
+                    <form>
+                        <input type="search" placeholder="搜索" />
+                    </form>
+                </div>
+                <div class="pages-2">
+                    <div class="page-list">
+                        <a class="p-item" href="./favorite.html">
+                            <span>收藏</span>
+                            <div class="small-icon">收</div>
+                        </a>
+                        <a class="p-item" href="./history.html">
+                            <span>历史</span>
+                            <div class="small-icon">历</div>
+                        </a>
+                        <a class="p-item" href="./setting.html">
+                            <span>设置</span>
+                            <div class="small-icon">设</div>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+            <nav class="mob-nav">
+                <div class="mn-inner">
+                    <div class="mn-head">
+                        <img src="./image/cover.png" alt="头像" />
+                    </div>
+                    <div class="mn-items-cr">
+                        <a class="mn-item" href="./index.html"> 主页 </a>
+                        <a class="mn-item" href="./latest.html"> 最新 </a>
+                        <a class="mn-item" href="./categories.html"> 分类 </a>
+                        <a class="mn-item" href="./favorite.html"> 收藏 </a>
+                        <a class="mn-item" href="./history.html"> 历史 </a>
+                        <a class="mn-item" href="./setting.html"> 设置 </a>
+                    </div>
+                </div>
+            </nav>
+            <div class="switch-server">
+                <span>图源1</span>
+                <div class="sh-sr-cr">
+                    <div class="server-name">图源1</div>
+                    <div class="server-name">图源2</div>
+                    <div class="server-name">图源3</div>
+                    <div class="server-name">图源4</div>
+                    <div class="server-name">图源5</div>
+                    <div class="server-name">图源6</div>
+                </div>
+            </div>
+            <div class="head">
+                <div class="cover"><img src="./image/cover.png" alt="" /></div>
+                <div class="comic-info">
+                    <h1 class="title">加载中</h1>
+                    <h2 class="author"></h2>
+                    <div class="detailed-info">
+                        <div class="tags"></div>
+                        <div class="latest"></div>
+                        <div class="introduction"></div>
+                    </div>
+                    <div class="download-comic">
+                        <span>下载</span>
+                        <div class="download-menu">
+                            <div class="download-menu-item" data-mode="longimg">
+                                长图
+                            </div>
+                            <div class="download-menu-item" data-mode="zipper">
+                                压缩包
+                            </div>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <div class="start-read">开始阅读</div>
+                        <div class="add-favorite">收藏</div>
+                    </div>
+                </div>
+            </div>
+            <div class="body">
+                <div class="body-left">
+                    <div class="mob-det-info">
+                        <div class="tags"></div>
+                        <div class="latest"></div>
+                        <div class="introduction"></div>
+                    </div>
+                    <div class="evaluation">
+                        <div class="likes">
+                            <div class="icon">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="800px"
+                                    height="800px"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        clip-rule="evenodd"
+                                        d="M15.0501 7.04419C15.4673 5.79254 14.5357 4.5 13.2163 4.5C12.5921 4.5 12.0062 4.80147 11.6434 5.30944L8.47155 9.75H5.85748L5.10748 10.5V18L5.85748 18.75H16.8211L19.1247 14.1428C19.8088 12.7747 19.5406 11.1224 18.4591 10.0408C17.7926 9.37439 16.8888 9 15.9463 9H14.3981L15.0501 7.04419ZM9.60751 10.7404L12.864 6.1813C12.9453 6.06753 13.0765 6 13.2163 6C13.5118 6 13.7205 6.28951 13.627 6.56984L12.317 10.5H15.9463C16.491 10.5 17.0133 10.7164 17.3984 11.1015C18.0235 11.7265 18.1784 12.6814 17.7831 13.472L15.8941 17.25H9.60751V10.7404ZM8.10751 17.25H6.60748V11.25H8.10751V17.25Z"
+                                        fill="#000000"
+                                    />
+                                </svg>
+                            </div>
+                            <span></span>
+                        </div>
+                        <div class="views">
+                            <div class="icon">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="800px"
+                                    height="800px"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                >
+                                    <circle
+                                        cx="12"
+                                        cy="12"
+                                        r="4"
+                                        fill="#33363F"
+                                    />
+                                    <path
+                                        d="M21 12C21 12 20 4 12 4C4 4 3 12 3 12"
+                                        stroke="#33363F"
+                                        stroke-width="2"
+                                    />
+                                </svg>
+                            </div>
+                            <span></span>
+                        </div>
+                        <div class="jm-id">
+                            <span></span>
+                        </div>
+                    </div>
+                    <div class="series">
+                        <h1>系列作品</h1>
+                        <div class="series-inner"></div>
+                    </div>
+                    <div class="comment">
+                        <h1>加载中</h1>
+                        <div class="comment-scroll-cr">
+                            <div class="comment-inner"></div>
+                        </div>
+                        <div class="comment-lock">lock</div>
+                    </div>
+                    <div class="comic-content-cr">
+                        <div class="cr-head">加载中</div>
+                        <div class="m-progress-cr">
+                            <div class="m-progress">
+                                <canvas class="progress-cvs" width="25px" height="200px"></canvas>
+                                <div class="m-progress-inner">
+                                    <span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="comic-img-cr"></div>
+                    </div>
+                </div>
+                <div class="body-right">
+                    <div class="recommended-comics">
+                        <h1 class="rc-title">更多漫画</h1>
+                        <div class="rc-cr"></div>
+                    </div>
+                    <div class="progress-cr">
+                        <div class="progress">
+                            <div class="progress-inner">
+                                <span>&larr;10</span>
+                            </div>
+                        </div>
+                        <div class="jmnian-looking">
+                            <img src="./image/looking.png" alt="looking" />
+                            <img
+                                src="./image/hot.png"
+                                alt="hot"
+                                class="jmnian-hot"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="loading-sakura">
+                <svg class="sakura-icon" height="100px" width="100px" version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+	 viewBox="0 0 512 512"  xml:space="preserve"><g><path d="M330.555,101.873c0-34.164-13.767-65.108-36.047-87.622c-2.432-2.465-9.63-4.349-14.212,3.466
+		c-4.589,7.808-17.205,27.431-17.205,27.431c-1.534,2.438-4.219,3.918-7.089,3.918c-2.883,0-5.555-1.48-7.089-3.918
+		c0,0-12.623-19.623-17.205-27.431c-4.582-7.815-11.781-5.931-14.219-3.466c-22.274,22.514-36.04,53.458-36.04,87.622
+		c0,51.02,30.663,94.847,74.553,114.142C299.892,196.72,330.555,152.892,330.555,101.873z"/><path d="M204.51,253.425c-4.78-47.705-36.998-90.409-85.518-106.176c-32.492-10.554-66.177-7.027-94.47,7.205
+		c-3.096,1.555-7.117,7.822-1.096,14.589c6.007,6.774,20.766,24.842,20.766,24.842c1.849,2.212,2.432,5.22,1.542,7.952
+		c-0.891,2.74-3.13,4.829-5.918,5.528c0,0-22.562,5.945-31.404,7.89c-8.849,1.945-9.281,9.37-7.692,12.445
+		c14.527,28.144,39.698,50.801,72.197,61.362C121.436,304.828,172.6,289.212,204.51,253.425z"/><path d="M96.772,362.484c-20.082,27.643-27.136,60.766-22.342,92.074c0.527,3.424,5.233,9.178,13.527,5.554
+		c8.308-3.63,30.054-12.088,30.054-12.088c2.672-1.062,5.698-0.692,8.041,1c2.329,1.692,3.623,4.466,3.418,7.335
+		c0,0-1.308,23.294-2.199,32.315c-0.883,9.006,6.048,11.712,9.466,11.15c31.252-5.116,60.581-22.054,80.662-49.704
+		c29.993-41.266,30.944-94.758,6.781-136.155C177.332,303.773,126.758,321.204,96.772,362.484z"/><path d="M287.824,313.964c-24.165,41.397-23.212,94.888,6.78,136.155c20.082,27.65,49.41,44.588,80.663,49.704
+		c3.418,0.562,10.349-2.144,9.466-11.15c-0.89-9.021-2.205-32.315-2.205-32.315c-0.198-2.869,1.102-5.643,3.431-7.335
+		c2.322-1.692,5.363-2.062,8.034-1c0,0,21.746,8.458,30.047,12.088c8.294,3.623,13.007-2.13,13.534-5.554
+		c4.787-31.308-2.254-64.43-22.342-92.074C385.246,321.204,334.672,303.766,287.824,313.964z"/><path d="M503.6,215.254c-8.849-1.945-31.41-7.89-31.41-7.89c-2.795-0.706-5.027-2.788-5.918-5.528
+		c-0.89-2.732-0.308-5.74,1.534-7.952c0,0,14.76-18.068,20.78-24.842c6.014-6.766,1.993-13.034-1.096-14.589
+		c-28.301-14.232-61.978-17.76-94.485-7.205c-48.519,15.767-80.731,58.472-85.512,106.176
+		c31.91,35.787,83.067,51.403,131.593,35.636c32.492-10.561,57.67-33.218,72.191-61.362
+		C512.867,224.624,512.449,217.199,503.6,215.254z"/></g></svg>
+            </div>
+        </div>
+    </body>
+    <script type="module" src="./src/pages/chapter.js"></script>
+</html>

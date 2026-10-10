@@ -1,0 +1,687 @@
+/*
+ * 主题配色变量（移植自 Jmcomic-webUI/style/basic.css 的 6 套主题体系）
+ * 主题：pink / blue / green / purple / gray / dark
+ * 通过 <html> 上的 {theme}-theme 类切换；:root 兜底为 pink，防止类名缺失时变量为空。
+ * 主题类由 index.html 同步脚本 + App.vue watchEffect 维护，localStorage key = app_theme。
+ *
+ * 分两部分：
+ * 1) webUI 原生 49 个 --theme-* 变量（值与 Jmcomic-webUI/style/basic.css 完全一致）
+ * 2) JmViewer 扩展语义变量（webUI 未覆盖的中性灰阶/状态色/阅读器/代码块等）
+ */
+
+/* ============ 粉色主题（默认，兼作 :root 兜底） ============ */
+:root,
+.pink-theme {
+  /* 基础颜色 */
+  --theme-bg: #ffffff;
+  --theme-text: #000000;
+  --theme-text-strong: #503535;
+  --theme-text-title: #ff77a5;
+  --theme-text-heading: #422731;
+  --theme-text-option: #5e2739;
+  --theme-text-inverse: #ffffff;
+  --theme-text-on-accent: #ffebf1;
+  --theme-logo: #aa4d4d;
+
+  /* 主色 */
+  --theme-primary: #f48fb1;
+  --theme-primary-light: #f8bbd0;
+  --theme-primary-lighter: #ffd5e1;
+  --theme-primary-soft: #ffdce6;
+  --theme-primary-wash: #ffcddc;
+  --theme-card-bg: #ffebf1;
+  --theme-menu-bg: #fff8f8;
+
+  /* 强调色 */
+  --theme-accent: #ff6183;
+  --theme-accent-light: #ff7fa7;
+  --theme-accent-soft: #ff75a3;
+  --theme-accent-main: #ff7aa2;
+  --theme-accent-pale: #ffabc7;
+  --theme-accent-muted: #ffb7b7;
+  --theme-accent-bright: #ff7db1;
+  --theme-accent-strong: #ff0066;
+  --theme-accent-deep: #a3014a;
+
+  /* 渐变色 */
+  --theme-gradient-end: #ffb7cc;
+
+  /* 边框线条 */
+  --theme-border: #ff5888;
+  --theme-border-light: #ffa8c2;
+  --theme-title-underline: #ff7d9a;
+
+  /* 背景色 */
+  --theme-banner-bg: #602c2c;
+  --theme-neutral-bg: #efefef;
+  --theme-image-bg: #999999;
+
+  /* 阴影 */
+  --theme-shadow: #ffb8c8;
+  --theme-shadow-strong: #794252;
+
+  /* 遮罩与半透明 */
+  --theme-overlay: rgba(0, 0, 0, 0.5);
+  --theme-overlay-strong: rgba(0, 0, 0, 0.6);
+  --theme-overlay-gradient: rgba(0, 0, 0, 0.8);
+  --theme-loading-overlay: rgba(138, 122, 128, 0.5);
+  --theme-input-bg: rgba(255, 255, 255, 0.5);
+
+  /* 加载动画 */
+  --theme-loading: rgb(228, 77, 147);
+  --theme-loading-shadow: #ff5e9c;
+  --theme-loading-bg: #d83875;
+  --theme-loading-glow: #fc5e7e;
+
+  /* 状态色 */
+  --theme-warning: #ff9900;
+  --theme-warning-bg: rgb(255, 223, 174);
+  --theme-danger: #b20e0e;
+
+  /* 进度条 */
+  --theme-progress-bg: #feb4ca;
+  --theme-progress-border: #ff84a9;
+  --theme-progress-frame: #000000;
+
+  /* JmViewer 扩展：中性灰阶（ink 文字 / line 边框 / surface 背景） */
+  --theme-ink: #333333;
+  --theme-ink-soft: #555555;
+  --theme-ink-mute: #666666;
+  --theme-ink-faint: #888888;
+  --theme-ink-ghost: #999999;
+  --theme-line: #dddddd;
+  --theme-line-soft: #eeeeee;
+  --theme-line-strong: #bbbbbb;
+  --theme-surface: #f5f5f5;
+  --theme-surface-soft: #fafafa;
+  --theme-surface-faint: #f8f8f8;
+
+  /* JmViewer 扩展：浅粉区块（卡片浅底 / 悬停） */
+  --theme-tint-bg: #fff0f5;
+  --theme-tint-hover: #fff5f8;
+  --theme-tint-soft: #fff0f3;
+  --theme-tint-mid: #ffe0eb;
+  --theme-tint-pale: #ffd0dd;
+
+  /* JmViewer 扩展：状态色补充 */
+  --theme-success: #28a745;
+  --theme-success-bg: #d4edda;
+  --theme-success-ink: #1e7e34;
+  --theme-danger-btn: #dc3545;
+  --theme-danger-soft: #ff5a88;
+  --theme-danger-strong: #e4396c;
+  --theme-danger-ink: #e8a0a0;
+  --theme-danger-bg: #ffeaea;
+  --theme-danger-bg-soft: #ffdddd;
+  --theme-warning-ink: #ffb454;
+  --theme-info: #007bff;
+
+  /* JmViewer 扩展：阅读器 / 代码块 / 线条 */
+  --theme-reader-bg: #0d111a;
+  --theme-reader-ink: #5a6b80;
+  --theme-code-bg: #1e1e1e;
+  --theme-code-ink: #d4d4d4;
+  --theme-code-line: #3a3a3a;
+  --theme-line-pink: #f0c0c0;
+  --theme-surface-pink: #f0e0e5;
+
+  /* JmViewer 扩展：rgba 分量（供 rgba(var(--theme-accent-rgb), a) 使用） */
+  --theme-accent-rgb: 255, 122, 162;
+  --theme-overlay-soft: rgba(0, 0, 0, 0.3);
+  --theme-overlay-faint: rgba(0, 0, 0, 0.1);
+  --theme-panel-bg: #ffffff;
+  --theme-toast-bg: rgba(0, 0, 0, 0.75);
+  --theme-reader-line: #33363f;
+  --theme-accent-glow: #ff9ec0;
+}
+
+/* ============ 蓝色主题 ============ */
+.blue-theme {
+  --theme-bg: #ffffff;
+  --theme-text: #16232e;
+  --theme-text-strong: #2c3e50;
+  --theme-text-title: #4a90d9;
+  --theme-text-heading: #1f3a52;
+  --theme-text-option: #274b66;
+  --theme-text-inverse: #ffffff;
+  --theme-text-on-accent: #eaf3fb;
+  --theme-logo: #2f6fa8;
+
+  --theme-primary: #7fb8e8;
+  --theme-primary-light: #bcdcf5;
+  --theme-primary-lighter: #d5e9f8;
+  --theme-primary-soft: #dcebfa;
+  --theme-primary-wash: #cde2f7;
+  --theme-card-bg: #eef6fd;
+  --theme-menu-bg: #f8fbfe;
+
+  --theme-accent: #3b8ede;
+  --theme-accent-light: #5fa6e8;
+  --theme-accent-soft: #4f9ce5;
+  --theme-accent-main: #4a97e2;
+  --theme-accent-pale: #9cc9f0;
+  --theme-accent-muted: #a8cdf2;
+  --theme-accent-bright: #4f9ce5;
+  --theme-accent-strong: #0066cc;
+  --theme-accent-deep: #014a80;
+
+  --theme-gradient-end: #b7d6f0;
+
+  --theme-border: #4a90d9;
+  --theme-border-light: #a8cdf2;
+  --theme-title-underline: #7fb2e0;
+
+  --theme-banner-bg: #22384d;
+  --theme-neutral-bg: #eef2f5;
+  --theme-image-bg: #8f9aa3;
+
+  --theme-shadow: #b8d4ea;
+  --theme-shadow-strong: #3d5a72;
+
+  --theme-overlay: rgba(0, 0, 0, 0.5);
+  --theme-overlay-strong: rgba(0, 0, 0, 0.6);
+  --theme-overlay-gradient: rgba(0, 0, 0, 0.8);
+  --theme-loading-overlay: rgba(122, 132, 138, 0.5);
+  --theme-input-bg: rgba(255, 255, 255, 0.5);
+
+  --theme-loading: rgb(77, 147, 228);
+  --theme-loading-shadow: #5e9cff;
+  --theme-loading-bg: #3875d8;
+  --theme-loading-glow: #5e7efc;
+
+  --theme-warning: #ff9900;
+  --theme-warning-bg: rgb(255, 223, 174);
+  --theme-danger: #b20e0e;
+
+  --theme-progress-bg: #b4d5fe;
+  --theme-progress-border: #84a9ff;
+  --theme-progress-frame: #000000;
+
+  --theme-ink: #16232e;
+  --theme-ink-soft: #2c3e50;
+  --theme-ink-mute: #4a5a68;
+  --theme-ink-faint: #7c8894;
+  --theme-ink-ghost: #8f9aa3;
+  --theme-line: #c9d8e6;
+  --theme-line-soft: #dce7f1;
+  --theme-line-strong: #b0c4d6;
+  --theme-surface: #eef2f5;
+  --theme-surface-soft: #f6f9fc;
+  --theme-surface-faint: #f3f7fb;
+
+  --theme-tint-bg: #eaf3fb;
+  --theme-tint-hover: #f2f8fd;
+  --theme-tint-soft: #ecf4fc;
+  --theme-tint-mid: #dcebfa;
+  --theme-tint-pale: #d5e9f8;
+
+  --theme-success: #28a745;
+  --theme-success-bg: #d4edda;
+  --theme-success-ink: #1e7e34;
+  --theme-danger-btn: #dc3545;
+  --theme-danger-soft: #d9534f;
+  --theme-danger-strong: #c0392b;
+  --theme-danger-ink: #d98a8a;
+  --theme-danger-bg: #fdecec;
+  --theme-danger-bg-soft: #fbdcdc;
+  --theme-warning-ink: #e6a23c;
+  --theme-info: #007bff;
+
+  --theme-reader-bg: #0a111a;
+  --theme-reader-ink: #5a7085;
+  --theme-code-bg: #101820;
+  --theme-code-ink: #d0dae2;
+  --theme-code-line: #2c3a47;
+  --theme-line-pink: #b8cfe2;
+  --theme-surface-pink: #dfe9f2;
+
+  --theme-accent-rgb: 74, 151, 226;
+  --theme-overlay-soft: rgba(0, 0, 0, 0.3);
+  --theme-overlay-faint: rgba(0, 0, 0, 0.1);
+  --theme-panel-bg: #ffffff;
+  --theme-toast-bg: rgba(0, 0, 0, 0.75);
+  --theme-reader-line: #2c3644;
+  --theme-accent-glow: #9cc9f0;
+}
+
+/* ============ 绿色主题 ============ */
+.green-theme {
+  --theme-bg: #ffffff;
+  --theme-text: #16261d;
+  --theme-text-strong: #2a4736;
+  --theme-text-title: #35a86b;
+  --theme-text-heading: #1d4030;
+  --theme-text-option: #245040;
+  --theme-text-inverse: #ffffff;
+  --theme-text-on-accent: #e9f8f0;
+  --theme-logo: #2b7d54;
+
+  --theme-primary: #7ed3a8;
+  --theme-primary-light: #bdebd5;
+  --theme-primary-lighter: #d6f2e3;
+  --theme-primary-soft: #dcf5e8;
+  --theme-primary-wash: #cdeadb;
+  --theme-card-bg: #eefaf3;
+  --theme-menu-bg: #f8fdfa;
+
+  --theme-accent: #2fae72;
+  --theme-accent-light: #54c48e;
+  --theme-accent-soft: #45bd85;
+  --theme-accent-main: #40b881;
+  --theme-accent-pale: #96dcba;
+  --theme-accent-muted: #a6e0c4;
+  --theme-accent-bright: #45bd85;
+  --theme-accent-strong: #00874d;
+  --theme-accent-deep: #03663c;
+
+  --theme-gradient-end: #b7e8cd;
+
+  --theme-border: #35a86b;
+  --theme-border-light: #a6e0c4;
+  --theme-title-underline: #79cf9f;
+
+  --theme-banner-bg: #1e3d2c;
+  --theme-neutral-bg: #eef2ef;
+  --theme-image-bg: #93a09a;
+
+  --theme-shadow: #b6e3cb;
+  --theme-shadow-strong: #3a6a52;
+
+  --theme-overlay: rgba(0, 0, 0, 0.5);
+  --theme-overlay-strong: rgba(0, 0, 0, 0.6);
+  --theme-overlay-gradient: rgba(0, 0, 0, 0.8);
+  --theme-loading-overlay: rgba(126, 138, 130, 0.5);
+  --theme-input-bg: rgba(255, 255, 255, 0.5);
+
+  --theme-loading: rgb(77, 228, 147);
+  --theme-loading-shadow: #5eff9c;
+  --theme-loading-bg: #38d875;
+  --theme-loading-glow: #5efc7e;
+
+  --theme-warning: #ff9900;
+  --theme-warning-bg: rgb(255, 223, 174);
+  --theme-danger: #b20e0e;
+
+  --theme-progress-bg: #b4feda;
+  --theme-progress-border: #84ffb4;
+  --theme-progress-frame: #000000;
+
+  --theme-ink: #16261d;
+  --theme-ink-soft: #2a4736;
+  --theme-ink-mute: #46584e;
+  --theme-ink-faint: #7e8c84;
+  --theme-ink-ghost: #93a09a;
+  --theme-line: #c8dccf;
+  --theme-line-soft: #dcebe2;
+  --theme-line-strong: #aecbba;
+  --theme-surface: #eef2ef;
+  --theme-surface-soft: #f6faf7;
+  --theme-surface-faint: #f2f8f4;
+
+  --theme-tint-bg: #e9f8f0;
+  --theme-tint-hover: #f1fbf5;
+  --theme-tint-soft: #ecf8f1;
+  --theme-tint-mid: #dcf5e8;
+  --theme-tint-pale: #d6f2e3;
+
+  --theme-success: #28a745;
+  --theme-success-bg: #d4edda;
+  --theme-success-ink: #1e7e34;
+  --theme-danger-btn: #dc3545;
+  --theme-danger-soft: #d9534f;
+  --theme-danger-strong: #c0392b;
+  --theme-danger-ink: #d98a8a;
+  --theme-danger-bg: #fdecec;
+  --theme-danger-bg-soft: #fbdcdc;
+  --theme-warning-ink: #e6a23c;
+  --theme-info: #007bff;
+
+  --theme-reader-bg: #0a150f;
+  --theme-reader-ink: #5a8070;
+  --theme-code-bg: #10201a;
+  --theme-code-ink: #d0e2d8;
+  --theme-code-line: #2c4738;
+  --theme-line-pink: #b8d6c4;
+  --theme-surface-pink: #dfeee6;
+
+  --theme-accent-rgb: 64, 184, 129;
+  --theme-overlay-soft: rgba(0, 0, 0, 0.3);
+  --theme-overlay-faint: rgba(0, 0, 0, 0.1);
+  --theme-panel-bg: #ffffff;
+  --theme-toast-bg: rgba(0, 0, 0, 0.75);
+  --theme-reader-line: #2c4438;
+  --theme-accent-glow: #96dcba;
+}
+
+/* ============ 紫色主题 ============ */
+.purple-theme {
+  --theme-bg: #ffffff;
+  --theme-text: #221a2e;
+  --theme-text-strong: #3c2f50;
+  --theme-text-title: #8a5cd9;
+  --theme-text-heading: #382a52;
+  --theme-text-option: #4a3666;
+  --theme-text-inverse: #ffffff;
+  --theme-text-on-accent: #f3eafb;
+  --theme-logo: #6b3fa8;
+
+  --theme-primary: #b18fe8;
+  --theme-primary-light: #d9c6f5;
+  --theme-primary-lighter: #e6daf8;
+  --theme-primary-soft: #e9dffa;
+  --theme-primary-wash: #ded0f7;
+  --theme-card-bg: #f4eefd;
+  --theme-menu-bg: #faf8fe;
+
+  --theme-accent: #8a4ede;
+  --theme-accent-light: #a06fe8;
+  --theme-accent-soft: #9663e5;
+  --theme-accent-main: #925ee2;
+  --theme-accent-pale: #c4a3f0;
+  --theme-accent-muted: #cbaff2;
+  --theme-accent-bright: #9663e5;
+  --theme-accent-strong: #6600cc;
+  --theme-accent-deep: #4a0180;
+
+  --theme-gradient-end: #d0b7f0;
+
+  --theme-border: #8a5cd9;
+  --theme-border-light: #cbaff2;
+  --theme-title-underline: #a97fe0;
+
+  --theme-banner-bg: #30224d;
+  --theme-neutral-bg: #f0eef5;
+  --theme-image-bg: #9a93a3;
+
+  --theme-shadow: #cbb6ea;
+  --theme-shadow-strong: #5a3d72;
+
+  --theme-overlay: rgba(0, 0, 0, 0.5);
+  --theme-overlay-strong: rgba(0, 0, 0, 0.6);
+  --theme-overlay-gradient: rgba(0, 0, 0, 0.8);
+  --theme-loading-overlay: rgba(132, 122, 138, 0.5);
+  --theme-input-bg: rgba(255, 255, 255, 0.5);
+
+  --theme-loading: rgb(147, 77, 228);
+  --theme-loading-shadow: #9c5eff;
+  --theme-loading-bg: #7538d8;
+  --theme-loading-glow: #7e5efc;
+
+  --theme-warning: #ff9900;
+  --theme-warning-bg: rgb(255, 223, 174);
+  --theme-danger: #b20e0e;
+
+  --theme-progress-bg: #dab4fe;
+  --theme-progress-border: #b484ff;
+  --theme-progress-frame: #000000;
+
+  --theme-ink: #221a2e;
+  --theme-ink-soft: #3c2f50;
+  --theme-ink-mute: #5a4a6e;
+  --theme-ink-faint: #8c7e9c;
+  --theme-ink-ghost: #9a93a3;
+  --theme-line: #d6cbe6;
+  --theme-line-soft: #e4dcf0;
+  --theme-line-strong: #c0b2d6;
+  --theme-surface: #f0eef5;
+  --theme-surface-soft: #f8f6fc;
+  --theme-surface-faint: #f5f2fa;
+
+  --theme-tint-bg: #f3eafb;
+  --theme-tint-hover: #f8f3fd;
+  --theme-tint-soft: #f4ecfc;
+  --theme-tint-mid: #e9dffa;
+  --theme-tint-pale: #e6daf8;
+
+  --theme-success: #28a745;
+  --theme-success-bg: #d4edda;
+  --theme-success-ink: #1e7e34;
+  --theme-danger-btn: #dc3545;
+  --theme-danger-soft: #d9534f;
+  --theme-danger-strong: #c0392b;
+  --theme-danger-ink: #d98a8a;
+  --theme-danger-bg: #fdecec;
+  --theme-danger-bg-soft: #fbdcdc;
+  --theme-warning-ink: #e6a23c;
+  --theme-info: #007bff;
+
+  --theme-reader-bg: #120a1a;
+  --theme-reader-ink: #705a85;
+  --theme-code-bg: #1a1020;
+  --theme-code-ink: #dae0e2;
+  --theme-code-line: #3a2c47;
+  --theme-line-pink: #c8b8e2;
+  --theme-surface-pink: #e8dfee;
+
+  --theme-accent-rgb: 146, 94, 226;
+  --theme-overlay-soft: rgba(0, 0, 0, 0.3);
+  --theme-overlay-faint: rgba(0, 0, 0, 0.1);
+  --theme-panel-bg: #ffffff;
+  --theme-toast-bg: rgba(0, 0, 0, 0.75);
+  --theme-reader-line: #362c44;
+  --theme-accent-glow: #c4a3f0;
+}
+
+/* ============ 灰白主题 ============ */
+.gray-theme {
+  --theme-bg: #ffffff;
+  --theme-text: #333333;
+  --theme-text-strong: #4a4a4a;
+  --theme-text-title: #6e6e6e;
+  --theme-text-heading: #3d3d3d;
+  --theme-text-option: #4f4f4f;
+  --theme-text-inverse: #ffffff;
+  --theme-text-on-accent: #f5f5f5;
+  --theme-logo: #4f4f4f;
+
+  --theme-primary: #9e9e9e;
+  --theme-primary-light: #b8b8b8;
+  --theme-primary-lighter: #eeeeee;
+  --theme-primary-soft: #e6e6e6;
+  --theme-primary-wash: #ebebeb;
+  --theme-card-bg: #f6f6f6;
+  --theme-menu-bg: #fbfbfb;
+
+  --theme-accent: #8a8a8a;
+  --theme-accent-light: #a0a0a0;
+  --theme-accent-soft: #5f5f5f;
+  --theme-accent-main: #8f8f8f;
+  --theme-accent-pale: #b5b5b5;
+  --theme-accent-muted: #9a9a9a;
+  --theme-accent-bright: #a8a8a8;
+  --theme-accent-strong: #3a3a3a;
+  --theme-accent-deep: #555555;
+
+  --theme-gradient-end: #d8d8d8;
+
+  --theme-border: #8f8f8f;
+  --theme-border-light: #dcdcdc;
+  --theme-title-underline: #d6d6d6;
+
+  --theme-banner-bg: #4f4f4f;
+  --theme-neutral-bg: #f0f0f0;
+  --theme-image-bg: #9a9a9a;
+
+  --theme-shadow: #dcdcdc;
+  --theme-shadow-strong: #6e6e6e;
+
+  --theme-overlay: rgba(0, 0, 0, 0.5);
+  --theme-overlay-strong: rgba(0, 0, 0, 0.6);
+  --theme-overlay-gradient: rgba(0, 0, 0, 0.8);
+  --theme-loading-overlay: rgba(150, 150, 150, 0.5);
+  --theme-input-bg: rgba(255, 255, 255, 0.5);
+
+  --theme-loading: rgb(150, 150, 150);
+  --theme-loading-shadow: #a8a8a8;
+  --theme-loading-bg: #757575;
+  --theme-loading-glow: #969696;
+
+  --theme-warning: #ff9900;
+  --theme-warning-bg: rgb(255, 223, 174);
+  --theme-danger: #b20e0e;
+
+  --theme-progress-bg: #dedede;
+  --theme-progress-border: #a8a8a8;
+  --theme-progress-frame: #4a4a4a;
+
+  --theme-ink: #333333;
+  --theme-ink-soft: #555555;
+  --theme-ink-mute: #666666;
+  --theme-ink-faint: #888888;
+  --theme-ink-ghost: #999999;
+  --theme-line: #dddddd;
+  --theme-line-soft: #eeeeee;
+  --theme-line-strong: #bbbbbb;
+  --theme-surface: #f5f5f5;
+  --theme-surface-soft: #fafafa;
+  --theme-surface-faint: #f8f8f8;
+
+  --theme-tint-bg: #f5f5f5;
+  --theme-tint-hover: #f8f8f8;
+  --theme-tint-soft: #f6f6f6;
+  --theme-tint-mid: #ececec;
+  --theme-tint-pale: #e6e6e6;
+
+  --theme-success: #28a745;
+  --theme-success-bg: #e0e0e0;
+  --theme-success-ink: #555555;
+  --theme-danger-btn: #dc3545;
+  --theme-danger-soft: #b04a46;
+  --theme-danger-strong: #a03e3a;
+  --theme-danger-ink: #a08080;
+  --theme-danger-bg: #ececec;
+  --theme-danger-bg-soft: #e4e4e4;
+  --theme-warning-ink: #b08a40;
+  --theme-info: #6a8ea8;
+
+  --theme-reader-bg: #1a1a1a;
+  --theme-reader-ink: #777777;
+  --theme-code-bg: #1e1e1e;
+  --theme-code-ink: #d4d4d4;
+  --theme-code-line: #3a3a3a;
+  --theme-line-pink: #c8c8c8;
+  --theme-surface-pink: #e8e8e8;
+
+  --theme-accent-rgb: 143, 143, 143;
+  --theme-overlay-soft: rgba(0, 0, 0, 0.3);
+  --theme-overlay-faint: rgba(0, 0, 0, 0.1);
+  --theme-panel-bg: #ffffff;
+  --theme-toast-bg: rgba(0, 0, 0, 0.75);
+  --theme-reader-line: #3a3a3a;
+  --theme-accent-glow: #b5b5b5;
+}
+
+/* ============ 深色主题 ============ */
+.dark-theme {
+  --theme-bg: #1b1518;
+  --theme-text: #f2e9ec;
+  --theme-text-strong: #ffd9e2;
+  --theme-text-title: #ff8fb4;
+  --theme-text-heading: #f7e9ee;
+  --theme-text-option: #f0d6de;
+  --theme-text-inverse: #ffffff;
+  --theme-text-on-accent: #2a141c;
+  --theme-logo: #ff9ec0;
+
+  --theme-primary: #b3607f;
+  --theme-primary-light: #3a2830;
+  --theme-primary-lighter: #33222a;
+  --theme-primary-soft: #472d38;
+  --theme-primary-wash: #412a34;
+  --theme-card-bg: #241a1f;
+  --theme-menu-bg: #1f171b;
+
+  --theme-accent: #ff6f95;
+  --theme-accent-light: #8f4560;
+  --theme-accent-soft: #ff88ad;
+  --theme-accent-main: #ff7aa2;
+  --theme-accent-pale: #a85f7c;
+  --theme-accent-muted: #c98ba4;
+  --theme-accent-bright: #ff7db1;
+  --theme-accent-strong: #ff4d88;
+  --theme-accent-deep: #ff9ec0;
+
+  --theme-gradient-end: #5a3a48;
+
+  --theme-border: #ff5888;
+  --theme-border-light: #6d4353;
+  --theme-title-underline: #8c4a62;
+
+  --theme-banner-bg: #120c0f;
+  --theme-neutral-bg: #2a2226;
+  --theme-image-bg: #4a4045;
+
+  --theme-shadow: #4a2f3a;
+  --theme-shadow-strong: #000000;
+
+  --theme-overlay: rgba(0, 0, 0, 0.7);
+  --theme-overlay-strong: rgba(0, 0, 0, 0.75);
+  --theme-overlay-gradient: rgba(0, 0, 0, 0.9);
+  --theme-loading-overlay: rgba(0, 0, 0, 0.6);
+  --theme-input-bg: rgba(255, 255, 255, 0.12);
+
+  --theme-loading: rgb(228, 77, 147);
+  --theme-loading-shadow: #ff5e9c;
+  --theme-loading-bg: #d83875;
+  --theme-loading-glow: #fc5e7e;
+
+  --theme-warning: #ffb340;
+  --theme-warning-bg: rgb(120, 85, 40);
+  --theme-danger: #ff6b6b;
+
+  --theme-progress-bg: #7a3f56;
+  --theme-progress-border: #ff84a9;
+  --theme-progress-frame: #f2e9ec;
+
+  --theme-ink: #e6dce0;
+  --theme-ink-soft: #c9bcc2;
+  --theme-ink-mute: #a89aa1;
+  --theme-ink-faint: #8c8086;
+  --theme-ink-ghost: #776c71;
+  --theme-line: #4a3f45;
+  --theme-line-soft: #3d343a;
+  --theme-line-strong: #5a4f55;
+  --theme-surface: #2a2226;
+  --theme-surface-soft: #241d21;
+  --theme-surface-faint: #262023;
+
+  --theme-tint-bg: #2e2228;
+  --theme-tint-hover: #35272e;
+  --theme-tint-soft: #31242a;
+  --theme-tint-mid: #3a2b32;
+  --theme-tint-pale: #412f37;
+
+  --theme-success: #5ddc7f;
+  --theme-success-bg: #22402c;
+  --theme-success-ink: #8ce8a4;
+  --theme-danger-btn: #ff6b6b;
+  --theme-danger-soft: #ff9a94;
+  --theme-danger-strong: #ff8fb4;
+  --theme-danger-ink: #e8b8b8;
+  --theme-danger-bg: #472a30;
+  --theme-danger-bg-soft: #3d2429;
+  --theme-warning-ink: #ffb454;
+  --theme-info: #6ab0ff;
+
+  --theme-reader-bg: #0d111a;
+  --theme-reader-ink: #5a6b80;
+  --theme-code-bg: #101014;
+  --theme-code-ink: #d4d4d4;
+  --theme-code-line: #3a3a42;
+  --theme-line-pink: #6d4353;
+  --theme-surface-pink: #3a2b32;
+
+  --theme-accent-rgb: 255, 122, 162;
+  --theme-overlay-soft: rgba(0, 0, 0, 0.5);
+  --theme-overlay-faint: rgba(0, 0, 0, 0.25);
+  --theme-panel-bg: #241a1f;
+  --theme-toast-bg: rgba(0, 0, 0, 0.85);
+  --theme-reader-line: #3a3a42;
+  --theme-accent-glow: #ff9ec0;
+}
+
+/* ============ 主题基础应用 ============ */
+body {
+  background-color: var(--theme-bg);
+  color: var(--theme-text);
+}

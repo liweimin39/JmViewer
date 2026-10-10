@@ -8,6 +8,19 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>JmViewer</title>
+    <script>
+      // 防主题闪烁：必须在 CSS/模块加载前同步设置 <html> 主题类（module 脚本是 defer 做不到）
+      // 刻意只做校验不写回，非法/缺省回落 pink
+      (function () {
+        var themes = ['pink', 'blue', 'green', 'purple', 'gray', 'dark'];
+        var t = 'pink';
+        try {
+          var v = localStorage.getItem('app_theme');
+          if (v && themes.indexOf(v) !== -1) t = v;
+        } catch (e) {}
+        document.documentElement.className = t + '-theme';
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

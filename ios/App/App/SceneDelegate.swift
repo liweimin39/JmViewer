@@ -17,6 +17,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         if let bridge = bridgeVC.bridge {
             bridge.registerPluginInstance(StoragePermissionPlugin())
+            bridge.registerPluginInstance(AppIconPlugin())
         }
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
@@ -105,5 +106,45 @@ public class StoragePermissionPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             topController?.present(alert, animated: true)
         }
+    }
+}
+
+// =====================================================
+// MARK: - AppIconPlugin（主题图标切换，iOS 10.3+）
+// =====================================================
+
+@objc(AppIconPlugin)
+public class AppIconPlugin: CAPPlugin, CAPBridgedPlugin {
+
+    // ★ Capacitor 8 必须声明这三个属性
+    public let identifier = "AppIconPlugin"
+    public let jsName = "AppIcon"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "setIcon", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getIcon", returnType: CAPPluginReturnPromise),
+    ]
+
+    @objc func setIcon(_ call: CAPPluginCall) {
+        let theme = call.getString("theme") ?? "pink"
+        guard UIApplication.shared.supportsAlternateIcons else {
+            call.reject("当前系统不支持切换图标")
+            return
+        }
+        // pink 为主图标，alternateIconName 传 nil；其余主题名即 CFBundleAlternateIcons 的 key
+        let name: String? = theme == "pink" ? nil : theme
+        DispatchQueue.main.async {
+            UIApplication.shared.setAlternateIconName(name) { error in
+                if let error = error {
+                    call.reject("切换图标失败：" + error.localizedDescription)
+                } else {
+                    call.resolve(["theme": theme])
+                }
+            }
+        }
+    }
+
+    @objc func getIcon(_ call: CAPPluginCall) {
+        let theme = UIApplication.shared.alternateIconName ?? "pink"
+        call.resolve(["theme": theme])
     }
 }

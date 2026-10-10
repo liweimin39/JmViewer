@@ -1,5 +1,5 @@
 .root.chapter-page-bg {
-  background: linear-gradient(120deg, #ffa8c2 0, transparent 700px);
+  background: linear-gradient(120deg, var(--theme-border-light) 0, transparent 700px);
 }
 
 /* ============ 头部（上下两块） ============ */
@@ -8,7 +8,7 @@
   flex-direction: column;
   width: 1100px;
   height: auto;
-  background-color: #ffebf1;
+  background-color: var(--theme-card-bg);
   margin: 20px auto;
   margin-bottom: 10px;
   border-radius: 8px;
@@ -28,7 +28,7 @@
   align-items: center;
   gap: 12px;
   padding: 14px 20px;
-  border-top: 1px solid #ffd0dd;
+  border-top: 1px solid var(--theme-tint-pale);
   background-color: rgba(255, 255, 255, 0.4);
   flex-wrap: wrap;
 }
@@ -92,8 +92,8 @@
   display: block;
   padding: 3px 10px;
   font-size: 12px;
-  color: #ffebf1;
-  background-color: #ff7aa2;
+  color: var(--theme-card-bg);
+  background-color: var(--theme-accent-main);
   border-radius: 20px;
   margin-top: 10px;
   margin-right: 10px;
@@ -109,8 +109,8 @@
   width: 150px;
   height: 60px;
   font-size: 20px;
-  color: #ffffff;
-  background-color: #ff7aa2;
+  color: var(--theme-text-inverse);
+  background-color: var(--theme-accent-main);
   text-align: center;
   line-height: 60px;
   border-radius: 10px;
@@ -123,7 +123,7 @@
   flex-shrink: 0;
 }
 .start-read:hover {
-  background: #ff5a88;
+  background: var(--theme-danger-soft);
 }
 .start-read:active {
   transform: scale(0.98);
@@ -144,14 +144,14 @@
 .mob-det-info {
   display: none;
   padding: 20px;
-  background-color: #ffebf1;
-  border-top: 1px solid #ffa8c2;
+  background-color: var(--theme-card-bg);
+  border-top: 1px solid var(--theme-border-light);
 }
 .evaluation {
   display: flex;
   width: 100%;
   height: 80px;
-  background-color: #ffebf1;
+  background-color: var(--theme-card-bg);
   justify-content: space-between;
   align-items: center;
   padding: 0 10px;
@@ -166,7 +166,7 @@
   align-items: center;
 }
 .evaluation .jm-id span {
-  color: #ff7aa2;
+  color: var(--theme-accent-main);
   font-size: 35px;
   font-weight: 900;
 }
@@ -197,7 +197,7 @@
   position: relative;
   width: 100%;
   height: auto;
-  background-color: #ffebf1;
+  background-color: var(--theme-card-bg);
   margin-top: 10px;
   padding: 20px;
 }
@@ -218,7 +218,7 @@
 .comment-item {
   display: flex;
   width: 100%;
-  border-bottom: 1px solid #ffa8c2;
+  border-bottom: 1px solid var(--theme-border-light);
   padding: 10px 0;
   gap: 10px;
   margin-top: 10px;
@@ -257,11 +257,11 @@
   bottom: 0;
   width: 250px;
   height: 40px;
-  color: #ff9900;
+  color: var(--theme-warning);
   font-size: 20px;
   text-align: center;
   line-height: 40px;
-  background: radial-gradient(circle at center, rgb(255, 223, 174) 0%, transparent 100%);
+  background: radial-gradient(circle at center, var(--theme-warning-bg) 0%, transparent 100%);
 }
 .cr-head {
   display: flex;
@@ -270,8 +270,8 @@
   justify-content: center;
   align-items: center;
   font-size: 20px;
-  background-color: #ff7aa2;
-  color: #ffffff;
+  background-color: var(--theme-accent-main);
+  color: var(--theme-text-inverse);
 }
 .comic-img-cr {
   width: 100%;
@@ -281,7 +281,7 @@
 .comic-img {
   position: relative;
   width: 100%;
-  background-color: #999999;
+  background-color: var(--theme-image-bg);
   transition: height 0.3s ease;
 }
 .comic-img span {
@@ -290,7 +290,7 @@
   top: calc(50% - 20px);
   width: 200px;
   height: 40px;
-  color: #ffffff;
+  color: var(--theme-text-inverse);
   text-align: center;
   line-height: 40px;
   font-size: 30px;
@@ -312,7 +312,7 @@
 }
 .recommended-comics {
   width: 100%;
-  background-color: #ffebf1;
+  background-color: var(--theme-card-bg);
   padding: 10px;
 }
 .rc-title {
@@ -368,7 +368,7 @@
   float: right;
   width: 20px;
   height: 120px;
-  background-color: #e4396c;
+  background-color: var(--theme-danger-strong);
   border-radius: 5px 0 0 5px;
   z-index: 10;
   margin-top: -120px;
@@ -387,7 +387,7 @@
   position: relative;
   width: 30px;
   height: 120px;
-  border: 1px solid #000000;
+  border: 1px solid var(--theme-progress-frame);
   border-radius: 5px;
   margin-top: 10px;
   z-index: 10;
@@ -398,7 +398,7 @@
   align-items: end;
   width: 100%;
   height: 39%;
-  border-bottom: 1px solid #ff7aa2;
+  border-bottom: 1px solid var(--theme-accent-main);
   padding-left: 100%;
 }
 .progress-inner span {
@@ -452,7 +452,7 @@
     width: 100%;
   }
   .evaluation {
-    background-color: #ffcddc;
+    background-color: var(--theme-primary-wash);
   }
   .comment,
   .head {
@@ -479,7 +479,7 @@
   }
   .cover img {
     border-radius: 5px;
-    box-shadow: 3px 3px 5px #ffa8c2;
+    box-shadow: 3px 3px 5px var(--theme-border-light);
   }
   .page-chapter .title {
     font-size: 20px;
@@ -570,10 +570,10 @@
 .chapter-list-cr {
   width: 100%;
   height: auto;
-  background-color: #ffebf1;
+  background-color: var(--theme-card-bg);
   margin-top: 10px;
   padding: 20px;
-  border-top: 1px solid #ffa8c2;
+  border-top: 1px solid var(--theme-border-light);
 }
 .cl-title {
   font-weight: 400;
@@ -590,7 +590,7 @@
   width: 4px;
 }
 .chapter-list-inner::-webkit-scrollbar-thumb {
-  background-color: #ff7aa2;
+  background-color: var(--theme-accent-main);
   border-radius: 2px;
 }
 .chapter-list-inner::-webkit-scrollbar-track {
@@ -604,28 +604,28 @@
   margin-bottom: 6px;
   border-radius: 6px;
   cursor: pointer;
-  background-color: #fff;
+  background-color: var(--theme-panel-bg);
   transition:
     background-color 0.2s,
     color 0.2s,
     border-color 0.2s;
   font-size: 16px;
-  color: #333;
-  border: 1px solid #ffdce6;
+  color: var(--theme-ink);
+  border: 1px solid var(--theme-primary-soft);
   user-select: none;
 }
 .cl-item:hover {
-  background-color: #ffdce6;
-  border-color: #ffb0c8;
+  background-color: var(--theme-primary-soft);
+  border-color: var(--theme-shadow);
 }
 .cl-item.active {
-  background-color: #ff7aa2;
-  color: #fff;
-  border-color: #ff7aa2;
+  background-color: var(--theme-accent-main);
+  color: var(--theme-text-inverse);
+  border-color: var(--theme-accent-main);
   font-weight: 500;
 }
 .cl-item.active:hover {
-  background-color: #e86a92;
+  background-color: var(--theme-accent-deep);
 }
 .cl-name {
   flex: 1;
@@ -642,7 +642,7 @@
   height: 30px;
   padding: 0;
   background: transparent;
-  color: #ff7aa2;
+  color: var(--theme-accent-main);
   border: 1px solid transparent;
   border-radius: 6px;
   cursor: pointer;
@@ -654,15 +654,15 @@
   -webkit-tap-highlight-color: transparent;
 }
 .cl-download-btn:hover {
-  background: #fff0f5;
-  border-color: #ffdce6;
+  background: var(--theme-tint-bg);
+  border-color: var(--theme-primary-soft);
 }
 .cl-download-btn:active {
-  background: #ffe0eb;
+  background: var(--theme-tint-mid);
   transform: scale(0.92);
 }
 .cl-item.active .cl-download-btn {
-  color: #fff;
+  color: var(--theme-text-inverse);
 }
 .cl-item.active .cl-download-btn:hover {
   background: rgba(255, 255, 255, 0.25);
@@ -696,7 +696,7 @@
     height: 110px;
     margin: 0 auto;
     background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 0 8px rgba(255, 122, 162, 0.7);
+    box-shadow: 0 0 8px rgba(var(--theme-accent-rgb), 0.7);
     cursor: pointer;
     touch-action: none;
     -webkit-user-select: none;
@@ -705,7 +705,7 @@
   .body-right .progress-inner {
     position: relative;
     padding-left: 0;
-    background: rgba(255, 122, 162, 0.35);
+    background: rgba(var(--theme-accent-rgb), 0.35);
   }
   .body-right .progress-inner span {
     position: absolute;
@@ -714,7 +714,7 @@
     transform: translateY(50%);
     white-space: nowrap;
     font-size: 13px;
-    color: #e4396c;
+    color: var(--theme-danger-strong);
     font-weight: 700;
     line-height: 1;
     padding: 2px 4px;
@@ -726,7 +726,7 @@
     width: 100%;
   }
   .evaluation {
-    background-color: #ffcddc;
+    background-color: var(--theme-primary-wash);
   }
   .comment,
   .head {
@@ -775,12 +775,12 @@
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: #fff;
-  border: 2px solid #ff7aa2;
+  background: var(--theme-panel-bg);
+  border: 2px solid var(--theme-accent-main);
   border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
-  color: #333;
+  color: var(--theme-ink);
   transition: all 0.3s ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -788,7 +788,7 @@
 
 .action-btn:hover,
 .download-btn:hover {
-  background: #fff0f3;
+  background: var(--theme-tint-soft);
   transform: scale(1.02);
 }
 
@@ -808,14 +808,14 @@
 }
 
 .action-btn.active {
-  background: #ff7aa2;
-  color: #fff;
-  border-color: #ff7aa2;
+  background: var(--theme-accent-main);
+  color: var(--theme-text-inverse);
+  border-color: var(--theme-accent-main);
 }
 
 .action-btn.active svg {
-  fill: #fff;
-  stroke: #fff;
+  fill: var(--theme-text-inverse);
+  stroke: var(--theme-text-inverse);
 }
 
 .action-btn.loading {

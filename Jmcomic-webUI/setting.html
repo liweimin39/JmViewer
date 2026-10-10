@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="Cache-Control" content="max-age=3600, must-revalidate">
+        <title>设置</title>
+        <link rel="stylesheet" href="./style/basic.css">
+        <link rel="stylesheet" href="./style/setting.css">
+    </head>
+    <body>
+        <script>
+            // 应用已保存的主题，避免页面先以默认主题渲染再变色
+            (function () {
+                const theme = localStorage.getItem("app_theme");
+                if (theme) document.documentElement.classList.add(theme + "-theme");
+            })();
+        </script>
+        <div class="root">
+            <nav class="nav">
+                <div class="page-list-btn">
+                    <div class="btn-inner"></div>
+                    <div class="btn-inner"></div>
+                    <div class="btn-inner"></div>
+                </div>
+                <div class="logo">JmViewer</div>
+                <div class="pages">
+                    <!-- <div class="bot-bar"></div> -->
+                    <div class="page-list">
+                        <a class="p-item" href="./index.html">首页</a>
+                        <a class="p-item" href="./latest.html">最新</a>
+                        <a class="p-item" href="./categories.html">分类</a>
+                    </div>
+                </div>
+                <div class="search">
+                    <form>
+                        <input type="search" placeholder="搜索" />
+                    </form>
+                </div>
+                <div class="pages-2">
+                    <div class="page-list">
+                        <a class="p-item" href="./favorite.html">
+                            <span>收藏</span>
+                            <div class="small-icon">收</div>
+                        </a>
+                        <a class="p-item" href="./history.html">
+                            <span>历史</span>
+                            <div class="small-icon">历</div>
+                        </a>
+                        <a class="active p-item" href="#">
+                            <span>设置</span>
+                            <div class="small-icon">设</div>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+            <nav class="mob-nav">
+                <div class="mn-inner">
+                    <div class="mn-head">
+                        <img src="./image/cover.png" alt="头像">
+                    </div>
+                    <div class="mn-items-cr">
+                        <a class="mn-item" href="./index.html">
+                            主页
+                        </a>
+                        <a class="mn-item" href="./latest.html">
+                            最新
+                        </a>
+                        <a class="mn-item" href="./categories.html">
+                            分类
+                        </a>
+                        <a class="mn-item" href="./favorite.html">
+                            收藏
+                        </a>
+                        <a class="mn-item" href="./history.html">
+                            历史
+                        </a>
+                        <a class="active mn-item">
+                            -设置-
+                        </a>
+                    </div>
+                </div>
+            </nav>
+            <div class="switch-server">
+                <span>图源1</span>
+                <div class="sh-sr-cr">
+                    <div class="server-name">
+                        图源1
+                    </div>
+                    <div class="server-name">
+                        图源2
+                    </div>
+                    <div class="server-name">
+                        图源3
+                    </div>
+                    <div class="server-name">
+                        图源4
+                    </div>
+                    <div class="server-name">
+                        图源5
+                    </div>
+                    <div class="server-name">
+                        图源6
+                    </div>
+                </div>
+            </div>
+            <div class="setting-body">
+                <h1 class="title">设置</h1>
+                <div class="options">
+                    <div class="option">
+                        <span>前往此项目的github: </span>
+                        <a href="https://github.com/zrhcdy/Jmcomic-webUI">https://github.com/zrhcdy/Jmcomic-webUI</a>
+                    </div>
+                    <div class="option">
+                        <span>关注b站账号喵</span>
+                        <a href="https://space.bilibili.com/3546855138921244">https://space.bilibili.com/3546855138921244</a>
+                    </div>
+                    <div class="option">
+                        <span>图片预加载边距: </span>
+                        <div class="option-list" data-key="root_margin">
+                            <div class="option-item" data-value="0px">0px</div>
+                            <div class="option-item" data-value="50px">50px</div>
+                            <div class="option-item" data-value="100px">100px</div>
+                            <div class="option-item" data-value="200px">200px</div>
+                            <div class="option-item" data-value="500px">500px</div>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <span>主题配色: </span>
+                        <div class="option-list" data-key="app_theme">
+                            <div class="option-item" data-value="pink" title="粉色主题">
+                                <span class="option-dot"></span>
+                                <span>粉色</span>
+                            </div>
+                            <div class="option-item" data-value="blue" title="蓝色主题">
+                                <span class="option-dot"></span>
+                                <span>蓝色</span>
+                            </div>
+                            <div class="option-item" data-value="green" title="绿色主题">
+                                <span class="option-dot"></span>
+                                <span>绿色</span>
+                            </div>
+                            <div class="option-item" data-value="purple" title="紫色主题">
+                                <span class="option-dot"></span>
+                                <span>紫色</span>
+                            </div>
+                            <div class="option-item" data-value="gray" title="灰白主题">
+                                <span class="option-dot"></span>
+                                <span>灰白</span>
+                            </div>
+                            <div class="option-item" data-value="dark" title="深色主题">
+                                <span class="option-dot"></span>
+                                <span>深色</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <span title="同时向所有服务器发起请求，只保留最快返回的那个，其余立刻取消（会成倍增加请求量）">并发请求: </span>
+                        <div class="option-list" data-key="concurrent_request">
+                            <div class="option-item" data-value="off">关闭</div>
+                            <div class="option-item" data-value="on">开启</div>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <span>精简模式: </span>
+                        <div class="option-list" data-key="lite_mode">
+                            <div class="option-item" data-value="off">关闭</div>
+                            <div class="option-item" data-value="on">开启</div>
+                        </div>
+                    </div>
+                    <div class="option speed-option">
+                        <span title="同时请求所有图片服务器上的同一张图，测完自动切到最快的那台">图片服务器测速: </span>
+                        <button class="speed-btn" type="button">开始测速</button>
+                        <span class="speed-tip"></span>
+                        <div class="speed-result"></div>
+                    </div>
+                </div>
+                <p class="slogan">不忘初心，为爱发电</p>
+            </div>
+        </div>
+        <script type="module" src="./src/pages/setting.js"></script>
+    </body>
+</html>

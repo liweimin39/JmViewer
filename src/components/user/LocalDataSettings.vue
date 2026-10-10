@@ -190,13 +190,13 @@ async function handleFileChange(e) {
         bottom: '100px',
         left: '50%',
         transform: 'translateX(-50%)',
-        background: toast.type === 'error' ? '#dc3545' : '#28a745',
-        color: '#fff',
+        background: toast.type === 'error' ? 'var(--theme-danger-btn)' : 'var(--theme-success)',
+        color: 'var(--theme-text-inverse)',
         padding: '12px 24px',
         borderRadius: '8px',
         fontSize: '16px',
         zIndex: 1000,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        boxShadow: '0 4px 12px var(--theme-overlay-soft)',
         maxWidth: '80%',
       }"
     >

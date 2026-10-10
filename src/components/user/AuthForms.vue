@@ -21,7 +21,7 @@ async function handleLogin() {
   if (loginState.loading) return
   if (!loginForm.username || !loginForm.password) {
     loginState.msg = '请填写完整信息'
-    loginState.color = '#d9534f'
+    loginState.color = 'var(--theme-danger-soft)'
     return
   }
   loginState.loading = true
@@ -33,7 +33,7 @@ async function handleLogin() {
     emit('logged-in')
   } catch (err) {
     loginState.msg = err.message || '登录失败'
-    loginState.color = '#d9534f'
+    loginState.color = 'var(--theme-danger-soft)'
   } finally {
     loginState.loading = false
   }
@@ -44,12 +44,12 @@ async function handleRegister() {
   const { username, email, password, confirm, gender } = regForm
   if (!username || !email || !password || !confirm) {
     regState.msg = '请填写所有必填项'
-    regState.color = '#d9534f'
+    regState.color = 'var(--theme-danger-soft)'
     return
   }
   if (password !== confirm) {
     regState.msg = '两次密码输入不一致'
-    regState.color = '#d9534f'
+    regState.color = 'var(--theme-danger-soft)'
     return
   }
   regState.loading = true
@@ -61,7 +61,7 @@ async function handleRegister() {
     regState.color = 'green'
   } catch (err) {
     regState.msg = err.message || '注册失败'
-    regState.color = '#d9534f'
+    regState.color = 'var(--theme-danger-soft)'
   } finally {
     regState.loading = false
   }
@@ -71,7 +71,7 @@ async function handleForgot() {
   if (forgotState.loading) return
   if (!forgotForm.email) {
     forgotState.msg = '请输入邮箱'
-    forgotState.color = '#d9534f'
+    forgotState.color = 'var(--theme-danger-soft)'
     return
   }
   forgotState.loading = true
@@ -83,7 +83,7 @@ async function handleForgot() {
     forgotState.color = 'green'
   } catch (err) {
     forgotState.msg = err.message || '发送失败'
-    forgotState.color = '#d9534f'
+    forgotState.color = 'var(--theme-danger-soft)'
   } finally {
     forgotState.loading = false
   }

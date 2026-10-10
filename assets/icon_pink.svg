@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffb0cb"/>
+      <stop offset="100%" stop-color="#ff5a88"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" fill="url(#bg)"/>
+  <text x="512" y="545"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="460"
+        font-weight="800"
+        letter-spacing="-30"
+        fill="#ffffff">Jm</text>
+</svg>

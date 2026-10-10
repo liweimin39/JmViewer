@@ -91,11 +91,11 @@ watch(() => props.chapter.id, async () => {
         class="comic-img"
         :data-path="path"
         :data-index="i"
-        style="min-height:100px;position:relative;background:#0d111a;overflow:hidden;padding:0;margin:0;line-height:0;font-size:0;"
+        style="min-height:100px;position:relative;background:var(--theme-reader-bg);overflow:hidden;padding:0;margin:0;line-height:0;font-size:0;"
       >
         <div
           class="img-placeholder"
-          style="display:flex;align-items:center;justify-content:center;width:100%;height:100px;color:#5a6b80;font-size:13px;background:#0d111a;padding:0;margin:0;line-height:1.4;"
+          style="display:flex;align-items:center;justify-content:center;width:100%;height:100px;color:var(--theme-reader-ink);font-size:13px;background:var(--theme-reader-bg);padding:0;margin:0;line-height:1.4;"
         >{{ path }}</div>
       </div>
     </div>
