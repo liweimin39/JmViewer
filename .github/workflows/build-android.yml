@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, Beta]
   workflow_dispatch:
     inputs:
       sign_release:
