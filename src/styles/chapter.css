@@ -719,7 +719,8 @@
     z-index: 60;
   }
   .body-right .recommended-comics,
-  .body-right .looking-slot {
+  .body-right .looking-slot,
+  .body-right .jmnian-looking {
     display: none;
   }
   .body-right .progress-slot {

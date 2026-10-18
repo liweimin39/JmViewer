@@ -1,6 +1,11 @@
 // 全部可选主题（类名约定为 `${值}-theme`，定义在 src/styles/theme.css）
 const THEME_VALUES = ['pink', 'blue', 'green', 'purple', 'gray', 'dark']
 
+// 漫画图片加载方式：
+// - direct：原实现，Image 直链 + crossOrigin + canvas.toDataURL
+// - blob：fetch 取字节 → Blob → objectURL 渲染，再解密
+const IMG_LOAD_MODES = ['direct', 'blob']
+
 /**
  * 把主题类应用到 <html>：先摘掉所有已知主题类，再挂上新的那个。
  * 同时同步 <meta name="theme-color">，让移动端地址栏 / 状态栏颜色跟随主题。
@@ -20,12 +25,14 @@ function applyTheme(theme) {
 class Setting{
     #settingValues={
         using_imgserver_index:["0","1","2","3","4","5"],
-        app_theme:THEME_VALUES
+        app_theme:THEME_VALUES,
+        img_load_mode:IMG_LOAD_MODES
     }
 
     #options={
         using_imgserver_index:"0",
-        app_theme:"pink"
+        app_theme:"pink",
+        img_load_mode:"direct"
     }
     constructor(){
 
@@ -61,6 +68,9 @@ class Setting{
     }
     get app_theme(){
         return this.#options.app_theme
+    }
+    get img_load_mode(){
+        return this.#options.img_load_mode
     }
 }
 export const setting=new Setting()

@@ -81,6 +81,12 @@
   flex-shrink: 0;
 }
 
+/* 选项内独占一行的说明文字 */
+.option > .section-tip {
+  flex-basis: 100%;
+  margin: 0;
+}
+
 .setting-action-btn {
   padding: 8px 16px;
   background: var(--theme-accent-main);

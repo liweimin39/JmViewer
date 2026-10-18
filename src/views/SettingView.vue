@@ -25,6 +25,18 @@ function pickTheme(value) {
   theme.value = value
 }
 
+// 漫画图片加载方式：direct = 原实现，blob = 先取字节再用 blob 渲染
+const loadMode = ref(setting.img_load_mode)
+const loadModes = [
+  { value: 'direct', name: '原图直链' },
+  { value: 'blob', name: 'Blob 加载' },
+]
+
+function pickLoadMode(value) {
+  setting.setOption('img_load_mode', value)
+  loadMode.value = value
+}
+
 async function handleClearTmp() {
   if (!confirm('确定清理临时文件吗？')) return
   try {
@@ -101,6 +113,25 @@ function goLocalData() {
             <span>{{ t.name }}</span>
           </button>
         </div>
+      </div>
+
+      <!-- 图片加载方式 -->
+      <div class="option">
+        <span class="option-label">图片加载方式：</span>
+        <div class="theme-list">
+          <button
+            v-for="m in loadModes"
+            :key="m.value"
+            class="theme-item"
+            :class="{ active: loadMode === m.value }"
+            @click="pickLoadMode(m.value)"
+          >
+            <span>{{ m.name }}</span>
+          </button>
+        </div>
+        <p class="section-tip">
+          Blob 加载：先取图片字节再渲染，可避免解密失败与 base64 内存膨胀；切换后重新进入章节生效
+        </p>
       </div>
 
       <!-- 开发者日志 -->
