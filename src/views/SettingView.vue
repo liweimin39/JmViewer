@@ -25,13 +25,11 @@ function pickTheme(value) {
   theme.value = value
 }
 
-// 漫画图片加载方式：direct = 原实现，blob = 先取字节再用 blob 渲染，
-// blob_nocache = 同 blob 但跳过浏览器缓存（每次重新下载）
+// 漫画图片加载方式：direct = 原实现，blob = 先取字节再用 blob 渲染
 const loadMode = ref(setting.img_load_mode)
 const loadModes = [
   { value: 'direct', name: '原图直链' },
   { value: 'blob', name: 'Blob 加载' },
-  { value: 'blob_nocache', name: 'Blob 不用缓存' },
 ]
 
 function pickLoadMode(value) {
@@ -140,7 +138,7 @@ function goLocalData() {
           </button>
         </div>
         <p class="section-tip">
-          Blob：先取字节再渲染，可避免解密失败与 base64 内存膨胀；「不用缓存」每次重新下载，更费流量。切换后重新进入章节生效
+          Blob 加载：先取图片字节再渲染，可避免解密失败与 base64 内存膨胀；切换后重新进入章节生效
         </p>
       </div>
 

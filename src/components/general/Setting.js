@@ -4,8 +4,7 @@ const THEME_VALUES = ['pink', 'blue', 'green', 'purple', 'gray', 'dark']
 // 漫画图片加载方式：
 // - direct：原实现，Image 直链 + crossOrigin + canvas.toDataURL
 // - blob：fetch 取字节 → Blob → objectURL 渲染，再解密
-// - blob_nocache：同 blob，但 fetch 带 cache:'no-store'，每次重新下载不经浏览器缓存
-const IMG_LOAD_MODES = ['direct', 'blob', 'blob_nocache']
+const IMG_LOAD_MODES = ['direct', 'blob']
 
 /**
  * 把主题类应用到 <html>：先摘掉所有已知主题类，再挂上新的那个。
