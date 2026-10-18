@@ -33,7 +33,6 @@ async function setup() {
   })
   progress.init(props.chapter.images.length - 1)
 
-  // ★ 修复：滚动时不仅要更新 ref，还要真正调用 progress.setProgress()
   loader.onIndexUpdate = (idx) => {
     progressIndex.value = idx
     progress.setProgress(idx)
@@ -56,8 +55,14 @@ async function setup() {
 }
 
 async function teardown() {
-  if (loader) { loader.destroy(); loader = null }
-  if (progress) { progress.destroy(); progress = null }
+  if (loader) {
+    loader.destroy()
+    loader = null
+  }
+  if (progress) {
+    progress.destroy()
+    progress = null
+  }
   loadedCount.value = 0
   progressIndex.value = 0
 }
@@ -74,11 +79,14 @@ onBeforeUnmount(() => {
   teardown()
 })
 
-watch(() => props.chapter.id, async () => {
-  await teardown()
-  await nextTick()
-  setup()
-})
+watch(
+  () => props.chapter.id,
+  async () => {
+    await teardown()
+    await nextTick()
+    setup()
+  },
+)
 </script>
 
 <template>
@@ -91,16 +99,15 @@ watch(() => props.chapter.id, async () => {
         class="comic-img"
         :data-path="path"
         :data-index="i"
-        style="min-height:100px;position:relative;background:#0d111a;overflow:hidden;padding:0;margin:0;line-height:0;font-size:0;"
       >
-        <div
-          class="img-placeholder"
-          style="display:flex;align-items:center;justify-content:center;width:100%;height:100px;color:#5a6b80;font-size:13px;background:#0d111a;padding:0;margin:0;line-height:1.4;"
-        >{{ path }}</div>
+        <div class="img-placeholder">
+          {{ path }}
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- 进度条 + 装饰图：一起 sticky 粘在视口 -->
   <Teleport v-if="ready" to=".progress-slot">
     <div class="progress-cr">
       <div class="progress" ref="progressRef">

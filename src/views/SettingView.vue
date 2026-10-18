@@ -3,16 +3,33 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import LogsPanel from '@/components/setting/LogsPanel.vue'
 import { offlineStorage } from '@/utils/offlineStorage.js'
+import { setting } from '@/components/general/Setting.js'
 import '@/styles/setting.css'
 
 const router = useRouter()
 const showLogs = ref(false)
 
+// 主题配色：取值与色卡照搬原项目 Jmcomic-webUI
+const theme = ref(setting.app_theme)
+const themeOptions = [
+  { value: 'pink', name: '粉色', color: '#f8bbd0' },
+  { value: 'blue', name: '蓝色', color: '#bcdcf5' },
+  { value: 'green', name: '绿色', color: '#bdebd5' },
+  { value: 'purple', name: '紫色', color: '#d9c6f5' },
+  { value: 'gray', name: '灰白', color: '#b8b8b8' },
+  { value: 'dark', name: '深色', color: '#3a2830' },
+]
+
+function pickTheme(value) {
+  setting.setTheme(value)
+  theme.value = value
+}
+
 async function handleClearTmp() {
   if (!confirm('确定清理临时文件吗？')) return
   try {
-    await offlineStorage.clearTmp()
-    alert('临时文件已清理')
+    const { failed } = await offlineStorage.clearTmp()
+    alert(failed > 0 ? `清理完成，但有 ${failed} 项删除失败` : '临时文件已清理')
   } catch (e) {
     alert('清理失败：' + (e?.message || '未知错误'))
   }
@@ -67,6 +84,23 @@ function goLocalData() {
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
+      </div>
+
+      <!-- 主题配色 -->
+      <div class="option">
+        <span class="option-label">主题配色：</span>
+        <div class="theme-list">
+          <button
+            v-for="t in themeOptions"
+            :key="t.value"
+            class="theme-item"
+            :class="{ active: theme === t.value }"
+            @click="pickTheme(t.value)"
+          >
+            <span class="theme-dot" :style="{ background: t.color }"></span>
+            <span>{{ t.name }}</span>
+          </button>
+        </div>
       </div>
 
       <!-- 开发者日志 -->

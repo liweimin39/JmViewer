@@ -154,8 +154,7 @@ export class ComicImageLoader {
   #handleLoadError(container, errorMsg) {
     container.innerHTML = ''
     const errorDiv = document.createElement('div')
-    errorDiv.style.cssText =
-      'display:block;color:#e68080;padding:20px;text-align:center;background:#1a1a22;font-size:14px;margin:0;line-height:1.4;'
+    errorDiv.className = 'reader-error'
     errorDiv.textContent = `加载失败`
     container.appendChild(errorDiv)
     this.#finalizeLoad(container)

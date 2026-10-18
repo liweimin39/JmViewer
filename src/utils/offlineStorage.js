@@ -160,11 +160,33 @@ async function readRawBase64(path) {
 
 // ==================== 通用 ====================
 
+/**
+ * 删除文件或目录
+ * 注意：Filesystem.deleteFile 只删单个文件——Android 原生侧写死 recursive=false，
+ * Web 侧遇到非空目录直接抛 "Folder is not empty."，所以目录必须走 rmdir(recursive)
+ * @returns {Promise<boolean>} 是否删除成功（原本就不存在时视为成功）
+ */
 async function remove(path, directory) {
   const dir = directory || mainDirectory()
+
+  let stat = null
   try {
-    await Filesystem.deleteFile({ path, directory: dir, recursive: true })
-  } catch {}
+    stat = await Filesystem.stat({ path, directory: dir })
+  } catch {
+    return true // 不存在，无需删除
+  }
+
+  try {
+    if (stat.type === 'directory') {
+      await Filesystem.rmdir({ path, directory: dir, recursive: true })
+    } else {
+      await Filesystem.deleteFile({ path, directory: dir })
+    }
+    return true
+  } catch (e) {
+    console.warn(`删除失败: ${path} - ${e?.message || e}`)
+    return false
+  }
 }
 
 async function removeRaw(path) {
@@ -241,25 +263,34 @@ async function initDirs() {
   await ensureRawDir(rawBase)
 }
 
+/**
+ * 清理 Tmp 目录下的临时产物（原图缓存 + 下载中间产物）
+ * 刻意保留 Tmp/logs（开发者日志）
+ * @returns {Promise<{removed:number, failed:number}>}
+ */
 async function clearTmp() {
-  try {
-    const tmp = tmpRootPath()
-    const items = await listDir(tmp)
-    for (const item of items) {
-      if (item.name === LOGS_DIR) continue
-      await remove(joinPath(tmp, item.name))
-    }
+  let removed = 0
+  let failed = 0
 
-    if (isAndroid()) {
-      const rawBase = joinPath(TMP_DIR, RAW_IMAGES_DIR)
-      try {
-        const rawItems = await listDirRaw(rawBase)
-        for (const item of rawItems) {
-          await removeRaw(joinPath(rawBase, item.name))
-        }
-      } catch {}
+  const tmp = tmpRootPath()
+  const items = await listDir(tmp)
+  for (const item of items) {
+    if (item.name === LOGS_DIR) continue
+    if (await remove(joinPath(tmp, item.name))) removed++
+    else failed++
+  }
+
+  // Android 原图缓存存在 ExternalCache，需单独清理
+  if (isAndroid()) {
+    const rawBase = joinPath(TMP_DIR, RAW_IMAGES_DIR)
+    const rawItems = await listDirRaw(rawBase)
+    for (const item of rawItems) {
+      if (await removeRaw(joinPath(rawBase, item.name))) removed++
+      else failed++
     }
-  } catch {}
+  }
+
+  return { removed, failed }
 }
 
 // ==================== 任务持久化 ====================

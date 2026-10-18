@@ -1,7 +1,7 @@
 .categories-head {
   width: 80%;
   height: auto;
-  border-bottom: 1px solid #ff5888;
+  border-bottom: 1px solid var(--theme-border);
   margin: auto;
   padding: 10px;
 }
@@ -21,14 +21,14 @@
 .tags-title {
   font-size: 30px;
   font-weight: 500;
-  color: #ff5888;
+  color: var(--theme-border);
 }
 
 /* ★ 改：加 .page-categories 前缀 */
 .page-categories .tag {
   flex-shrink: 0;
   padding: 5px 10px;
-  border: 1px solid #ff5888;
+  border: 1px solid var(--theme-border);
   border-radius: 5px;
   font-weight: 400;
   cursor: pointer;
@@ -44,7 +44,7 @@
 .page-categories .sort-item {
   flex-shrink: 0;
   padding: 5px 10px;
-  border: 1px solid #ff5888;
+  border: 1px solid var(--theme-border);
   border-radius: 5px;
   font-weight: 400;
   cursor: pointer;
@@ -55,12 +55,12 @@
 .page-categories .sort-item.active,
 .page-categories .tag:hover,
 .page-categories .sort-item:hover {
-  background-color: #ff5888;
-  color: #ffffff;
+  background-color: var(--theme-border);
+  color: var(--theme-text-inverse);
 }
 
 .tags-inner {
-  background-color: #ffd5e1;
+  background-color: var(--theme-primary-lighter);
 }
 .categories-body {
   width: 100%;

@@ -8,8 +8,17 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>JmViewer</title>
+    <meta name="theme-color" content="#f8bbd0" id="theme-color-meta" />
   </head>
   <body>
+    <!-- 主题预置：必须在任何脚本/样式之前同步执行，避免首帧闪回默认配色
+         这里刻意不做白名单校验：非法值只会拼出无害的类名，由 :root 兜底 -->
+    <script>
+      (function () {
+        var t = localStorage.getItem('app_theme')
+        if (t) document.documentElement.classList.add(t + '-theme')
+      })()
+    </script>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>

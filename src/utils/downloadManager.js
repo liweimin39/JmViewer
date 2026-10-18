@@ -476,6 +476,15 @@ class DownloadManager {
         const buffer = await res.arrayBuffer()
         if (!buffer || buffer.byteLength === 0) throw new Error('响应为空')
 
+        // ★ 原图先落盘到 Tmp（临时中间产物）：解密结果写盘成功后立即删除，
+        //   中断/失败时残留，交由 clearTmp() 清理
+        const rawPath = `${offlineStorage.rawChapterPath(albumId, chapterId)}/${originalName}`
+        try {
+          await offlineStorage.writeRawBase64(rawPath, arrayBufferToBase64(buffer))
+        } catch (err) {
+          logger.warn(`[Download] 原图落盘失败（不影响下载）: ${originalName}`, err)
+        }
+
         let decodedBase64
         // ★ 用 chapterId 判断是否需要解密
         if (needsDecrypt(chapterId, originalName)) {
@@ -501,6 +510,9 @@ class DownloadManager {
         }
 
         await offlineStorage.writeBase64(decodedPath, decodedBase64)
+
+        // 解密结果已落盘，原图作为中间产物删除
+        await offlineStorage.removeRaw(rawPath)
 
         task.downloadedImages++
         this._notify()
