@@ -293,6 +293,29 @@ async function clearTmp() {
   return { removed, failed }
 }
 
+/**
+ * 清理网页缓存的图片（WebView 加载过的图片 / 资源）
+ * - Android：StoragePermission.clearWebCache → WebView.clearCache(true)
+ * - iOS：同一插件的 clearWebCache → WKWebsiteDataStore.removeData（仅缓存类数据）
+ * - Web：浏览器 HTTP 缓存无法由 JS 清理，返回 supported:false
+ * @returns {Promise<{supported:boolean, cleared:boolean}>}
+ */
+async function clearImageCache() {
+  if (!isNative()) {
+    return { supported: false, cleared: false }
+  }
+
+  try {
+    const { registerPlugin } = await import('@capacitor/core')
+    const StoragePermission = registerPlugin('StoragePermission')
+    await StoragePermission.clearWebCache()
+    return { supported: true, cleared: true }
+  } catch (e) {
+    console.warn('清理 WebView 缓存失败:', e)
+    return { supported: true, cleared: false }
+  }
+}
+
 // ==================== 任务持久化 ====================
 
 async function saveTasks(tasks) {
@@ -332,6 +355,7 @@ export const offlineStorage = {
 
   initDirs,
   clearTmp,
+  clearImageCache,
 
   ensureDir,
   ensureRawDir,

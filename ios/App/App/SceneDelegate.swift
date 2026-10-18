@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import WebKit
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
@@ -45,6 +46,7 @@ public class StoragePermissionPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "openFolder", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "checkAllFilesAccess", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "openAllFilesAccess", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "clearWebCache", returnType: CAPPluginReturnPromise),
     ]
 
     @objc func openFolder(_ call: CAPPluginCall) {
@@ -82,6 +84,23 @@ public class StoragePermissionPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func openAllFilesAccess(_ call: CAPPluginCall) {
         call.resolve()
+    }
+
+    /// 清理 WebView 的网页缓存（图片等静态资源）
+    /// 只清缓存类数据，不动 cookies / localStorage / IndexedDB，避免用户被登出或丢失本地数据
+    @objc func clearWebCache(_ call: CAPPluginCall) {
+        let types: Set<String> = [
+            WKWebsiteDataTypeDiskCache,
+            WKWebsiteDataTypeMemoryCache,
+            WKWebsiteDataTypeOfflineWebApplicationCache,
+            WKWebsiteDataTypeFetchCache,
+        ]
+
+        WKWebsiteDataStore.default().removeData(ofTypes: types, modifiedSince: .distantPast) {
+            // WKWebView 的部分请求仍走 URLCache 共享缓存，一并清掉
+            URLCache.shared.removeAllCachedResponses()
+            call.resolve()
+        }
     }
 
     // MARK: - 辅助

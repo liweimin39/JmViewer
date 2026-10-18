@@ -82,11 +82,12 @@ export class ComicImageLoader {
     this.loadingMap.set(container, 'loading')
 
     // ★ 加载方式由设置项 img_load_mode 决定（切换后重新进入章节生效）：
-    //   direct = 原实现；blob = fetch 取字节 → Blob → objectURL 渲染
-    if (setting.img_load_mode === 'blob') {
-      this.#loadAsBlob(container, path)
-    } else {
+    //   direct = 原实现；blob / blob_nocache = fetch 取字节 → Blob → objectURL 渲染
+    //   blob_nocache 额外带 cache:'no-store'，每次重新下载、不读也不写浏览器缓存
+    if (setting.img_load_mode === 'direct') {
       this.#loadDirect(container, path)
+    } else {
+      this.#loadAsBlob(container, path)
     }
   }
 
@@ -176,9 +177,13 @@ export class ComicImageLoader {
     let source = null
     let sourceUrl = null
 
+    // blob_nocache 模式：绕过浏览器 HTTP 缓存，每次都重新下载
+    const noCache = setting.img_load_mode === 'blob_nocache'
+
     try {
       const response = await fetch(jmApi.getChapterImageURL(this.id, path), {
         signal: controller.signal,
+        cache: noCache ? 'no-store' : 'default',
       })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
 

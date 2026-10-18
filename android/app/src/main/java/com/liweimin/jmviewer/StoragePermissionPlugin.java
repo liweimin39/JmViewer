@@ -7,6 +7,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.Settings;
+import android.webkit.WebView;
 import android.widget.Toast;
 
 import com.getcapacitor.JSObject;
@@ -68,6 +69,30 @@ public class StoragePermissionPlugin extends Plugin {
             result.put("granted", true);
         }
         call.resolve(result);
+    }
+
+    // ==================== 缓存 ====================
+
+    /**
+     * 清理 WebView 的 HTTP 缓存（内存 + 磁盘），即网页加载过的图片 / 资源缓存。
+     * clearCache(true) 需在主线程调用，用 View.post 保证线程正确。
+     */
+    @PluginMethod
+    public void clearWebCache(PluginCall call) {
+        final WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+        if (webView == null) {
+            call.resolve();   // 无 WebView，视为无需清理
+            return;
+        }
+
+        webView.post(() -> {
+            try {
+                webView.clearCache(true);
+                call.resolve();
+            } catch (Exception e) {
+                call.reject("清理缓存失败：" + e.getMessage());
+            }
+        });
     }
 
     // ==================== 打开文件夹 ====================

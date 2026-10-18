@@ -25,11 +25,13 @@ function pickTheme(value) {
   theme.value = value
 }
 
-// 漫画图片加载方式：direct = 原实现，blob = 先取字节再用 blob 渲染
+// 漫画图片加载方式：direct = 原实现，blob = 先取字节再用 blob 渲染，
+// blob_nocache = 同 blob 但跳过浏览器缓存（每次重新下载）
 const loadMode = ref(setting.img_load_mode)
 const loadModes = [
   { value: 'direct', name: '原图直链' },
   { value: 'blob', name: 'Blob 加载' },
+  { value: 'blob_nocache', name: 'Blob 不用缓存' },
 ]
 
 function pickLoadMode(value) {
@@ -38,10 +40,18 @@ function pickLoadMode(value) {
 }
 
 async function handleClearTmp() {
-  if (!confirm('确定清理临时文件吗？')) return
+  if (!confirm('确定清理临时文件吗？将同时清理网页缓存的图片')) return
   try {
     const { failed } = await offlineStorage.clearTmp()
-    alert(failed > 0 ? `清理完成，但有 ${failed} 项删除失败` : '临时文件已清理')
+    const { supported, cleared } = await offlineStorage.clearImageCache()
+
+    const notes = [
+      failed > 0 ? `临时文件清理完成，但有 ${failed} 项删除失败` : '临时文件已清理',
+    ]
+    if (cleared) notes.push('网页图片缓存已清理')
+    else if (supported) notes.push('网页图片缓存清理失败')
+    else notes.push('当前平台无法清理浏览器图片缓存')
+    alert(notes.join('\n'))
   } catch (e) {
     alert('清理失败：' + (e?.message || '未知错误'))
   }
@@ -130,7 +140,7 @@ function goLocalData() {
           </button>
         </div>
         <p class="section-tip">
-          Blob 加载：先取图片字节再渲染，可避免解密失败与 base64 内存膨胀；切换后重新进入章节生效
+          Blob：先取字节再渲染，可避免解密失败与 base64 内存膨胀；「不用缓存」每次重新下载，更费流量。切换后重新进入章节生效
         </p>
       </div>
 
@@ -140,10 +150,13 @@ function goLocalData() {
         <button class="setting-action-btn" @click="showLogs = true">查看 / 导出日志</button>
       </div>
 
-      <!-- 临时文件 -->
+      <!-- 临时文件 + 网页图片缓存 -->
       <div class="option">
         <span class="option-label">临时文件：</span>
         <button class="setting-action-btn" @click="handleClearTmp">清理临时文件</button>
+        <p class="section-tip">
+          同时清理网页缓存的图片（Android / iOS 清理 WebView 缓存，Web 端由浏览器管理）
+        </p>
       </div>
     </div>
   </div>
