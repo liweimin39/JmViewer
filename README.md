@@ -30,13 +30,22 @@
 - 按章节流水线处理（请求 API → 下载图片）
 - 实时进度（章节 + 图片双维度）
 - 图片解密后保存，原生端直接打开文件夹
+- 下载时同步保存封面与元数据到本地 SQLite
+
+### 离线阅读
+
+- **离线库**：按漫画汇总已下载章节与占用空间，支持单部删除
+- 离线阅读为独立页面，完全读取本地 SQLite + 文件系统，断网可用
+- 离线页只展示已下载章节，不加载评论、推荐等在线内容
 
 ### 数据管理
 
 - 收藏 / 历史 JSON 导出与导入
 - 历史批量删除
-- 临时文件清理
+- 临时文件清理（含 WebView 图片缓存）
 - 开发者日志自动记录 / 保存 / 导出
+- 免责声明首次启动弹窗，设置页可重新查看
+- 关于页展示版本、项目地址与技术栈
 
 ### 原生能力
 
@@ -46,21 +55,22 @@
 - iOS 系统「文件」App 集成（`shareddocuments://`）
 - 自定义 App 图标 + 启动屏
 - 图源切换
+- 多套主题配色、图片加载方式切换
 
 ---
 
 ## 技术栈
 
-| 分类         | 技术                                        |
-| ------------ | ------------------------------------------- |
-| **框架**     | Vue 3（Composition API）+ Vue Router        |
-| **构建**     | Vite                                        |
-| **原生容器** | Capacitor 8                                 |
-| **加密**     | crypto-js（AES / MD5）                      |
-| **压缩**     | JSZip（Web 端）                             |
-| **存储**     | IndexedDB（本地账号）+ localStorage（设置） |
-| **CI/CD**    | GitHub Actions                              |
-| **样式**     | 原生 CSS（按页面命名空间隔离）              |
+| 分类         | 技术                                                  |
+| ------------ | ----------------------------------------------------- |
+| **框架**     | Vue 3（Composition API）+ Vue Router                  |
+| **构建**     | Vite                                                  |
+| **原生容器** | Capacitor 8                                           |
+| **加密**     | crypto-js（AES / MD5）                                |
+| **压缩**     | JSZip（Web 端）                                       |
+| **存储**     | SQLite（离线漫画）+ IndexedDB（本地账号）+ localStorage（设置） |
+| **CI/CD**    | GitHub Actions                                        |
+| **样式**     | 原生 CSS（按页面命名空间隔离）                        |
 
 ---
 
@@ -102,17 +112,19 @@ project/
 │ │ │ └── Setting.js
 │ │ ├── index/ # 首页组件
 │ │ ├── latest/ # 最新页组件（ComicCard）
-│ │ ├── setting/ # 设置页组件
+│ │ ├── setting/ # 设置页组件（含 AboutView / DisclaimerOverlay）
 │ │ ├── user/ # 用户页组件
 │ │ └── ...
 │ ├── composables/ # 组合式函数
 │ │ ├── useUser.js # 云端账号状态
 │ │ ├── useLocalUser.js # 本地账号状态
+│ │ ├── useDisclaimer.js # 免责声明弹窗状态
 │ │ └── useStoragePermission.js
 │ ├── router/ # 路由配置
 │ ├── styles/ # 全局样式
 │ ├── utils/
 │ │ ├── localDB.js # IndexedDB 封装（多用户 + 连接容错）
+│ │ ├── offlineDB.js # 离线漫画 SQLite（专辑 / 章节 / 图片 / 任务）
 │ │ ├── offlineStorage.js # 文件系统封装
 │ │ ├── downloadManager.js # 下载队列管理
 │ │ ├── zipHelper.js # JSZip 打包
@@ -124,6 +136,8 @@ project/
 │ │ ├── SearchView.vue
 │ │ ├── CategoriesView.vue
 │ │ ├── ChapterView.vue
+│ │ ├── OfflineView.vue # 离线库
+│ │ ├── OfflineChapterView.vue # 离线阅读
 │ │ ├── SettingView.vue
 │ │ ├── UserView.vue
 │ │ ├── DownloadsView.vue
