@@ -15,9 +15,7 @@ const isNative = Capacitor.isNativePlatform()
 
 const albums = ref([])
 const loading = ref(true)
-const expandedId = ref(null)
-const chapters = ref([])
-const chapterLoading = ref(false)
+const openingId = ref(null)
 
 const totalBytes = computed(() => albums.value.reduce((sum, a) => sum + (a.bytes || 0), 0))
 
@@ -53,27 +51,23 @@ async function loadAlbums() {
   }
 }
 
-async function toggleAlbum(album) {
-  if (expandedId.value === album.id) {
-    expandedId.value = null
-    return
-  }
-
-  expandedId.value = album.id
-  chapters.value = []
-  chapterLoading.value = true
+/** 点击漫画直接打开第一个已下载章节 */
+async function openFirstChapter(album) {
+  if (openingId.value) return
+  openingId.value = album.id
   try {
-    chapters.value = await offlineDB.listChapters(album.id)
+    const chapters = await offlineDB.listChapters(album.id)
+    if (!chapters.length) {
+      alert('该漫画没有已下载章节')
+      return
+    }
+    // 离线阅读走独立页面，不与在线阅读页混用
+    router.push({ name: 'offline-chapter', params: { id: chapters[0].id } })
   } catch (e) {
-    console.warn('[Offline] 读取章节失败:', e)
+    alert('打开失败：' + (e?.message || '未知错误'))
   } finally {
-    chapterLoading.value = false
+    openingId.value = null
   }
-}
-
-function openChapter(chapter) {
-  // 离线阅读走独立页面，不与在线阅读页混用
-  router.push({ name: 'offline-chapter', params: { id: chapter.id } })
 }
 
 async function removeAlbum(album) {
@@ -95,7 +89,6 @@ async function removeAlbum(album) {
       await offlineDB.deleteAlbum(album.id)
     }
 
-    if (expandedId.value === album.id) expandedId.value = null
     await loadAlbums()
   } catch (e) {
     alert('删除失败：' + (e?.message || '未知错误'))
@@ -138,7 +131,7 @@ onMounted(async () => {
 
     <div v-else-if="isNative" class="off-list">
       <div v-for="album in albums" :key="album.id" class="off-card">
-        <div class="off-card-main" @click="toggleAlbum(album)">
+        <div class="off-card-main" @click="openFirstChapter(album)">
           <div class="off-cover">
             <img :src="coverSrc(album)" :alt="album.name" @error="onCoverError" />
           </div>
@@ -154,7 +147,6 @@ onMounted(async () => {
           </div>
 
           <div class="off-actions">
-            <span class="off-chevron" :class="{ open: expandedId === album.id }">›</span>
             <button class="off-del" title="删除离线文件" @click.stop="removeAlbum(album)">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -173,22 +165,6 @@ onMounted(async () => {
                 <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
               </svg>
             </button>
-          </div>
-        </div>
-
-        <div v-if="expandedId === album.id" class="off-chapters">
-          <div v-if="chapterLoading" class="off-chapter-hint">加载中...</div>
-          <div v-else-if="chapters.length === 0" class="off-chapter-hint">暂无已下载章节</div>
-          <div
-            v-else
-            v-for="chapter in chapters"
-            :key="chapter.id"
-            class="off-chapter"
-            @click="openChapter(chapter)"
-          >
-            <span class="off-ch-name">{{ chapter.name || `第 ${chapter.idx + 1} 章` }}</span>
-            <span class="off-ch-meta">{{ chapter.imageCount }} 张 · {{ formatSize(chapter.bytes) }}</span>
-            <span class="off-ch-arrow">›</span>
           </div>
         </div>
       </div>

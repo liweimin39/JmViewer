@@ -77,8 +77,6 @@ onBeforeUnmount(() => {
   </div>
 
   <template v-else-if="album && chapter">
-    <div class="offline-bar">离线阅读 · 仅显示已下载内容</div>
-
     <ComicHead :album="album" offline @read="scrollToContent" />
 
     <div class="body">
@@ -126,20 +124,5 @@ onBeforeUnmount(() => {
   font-size: 14px;
   color: var(--theme-accent-main);
   text-decoration: none;
-}
-.offline-bar {
-  width: 80%;
-  margin: 12px auto -8px;
-  padding: 7px 12px;
-  border-radius: 8px;
-  background: var(--theme-accent-wash);
-  color: var(--theme-accent-main);
-  font-size: 12px;
-  text-align: center;
-}
-@media (max-width: 600px) {
-  .offline-bar {
-    width: 92%;
-  }
 }
 </style>
