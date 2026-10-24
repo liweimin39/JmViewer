@@ -217,4 +217,4 @@ jobs:
           files: artifacts/*
           generate_release_notes: true
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'Beta') }}
