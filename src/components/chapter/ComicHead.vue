@@ -1,12 +1,22 @@
 <script setup>
 import { computed } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import { jmApi } from '@/api/JmcomicApi.js'
 import ActionButtons from './ActionButtons.vue'
 
-const props = defineProps({ album: { type: Object, required: true } })
+const props = defineProps({
+  album: { type: Object, required: true },
+  // 离线阅读页：隐藏下载/收藏/追踪等需要联网的操作
+  offline: { type: Boolean, default: false },
+})
 const emit = defineEmits(['read', 'download-all'])
 
-const coverUrl = computed(() => jmApi.getCoverImageURL(props.album.id))
+// 离线章节优先用下载时保存的本地封面
+const coverUrl = computed(() =>
+  props.album.coverUri
+    ? Capacitor.convertFileSrc(props.album.coverUri)
+    : jmApi.getCoverImageURL(props.album.id),
+)
 const authorText = computed(() => (props.album.author || []).join(' & '))
 
 // ★ 封面占位图
@@ -48,8 +58,8 @@ function onCoverError(e) {
       </div>
     </div>
 
-    <!-- 下半区：下载 + 收藏 + 追踪 -->
-    <div class="head-actions">
+    <!-- 下半区：下载 + 收藏 + 追踪（离线页隐藏） -->
+    <div v-if="!offline" class="head-actions">
       <div class="download-btn" @click="emit('download-all')">
         <svg
           xmlns="http://www.w3.org/2000/svg"

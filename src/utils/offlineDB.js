@@ -214,10 +214,21 @@ async function listAlbums() {
         chapterCount: Number(row.chapter_count) || 0,
         bytes: Number(row.total_bytes) || 0,
         lastDownloaded: Number(row.last_downloaded) || 0,
-        coverUri: await firstImageUri(row.id),
+        coverUri: (await getAlbumCoverUri(row.id)) || (await firstImageUri(row.id)),
       }
     }),
   )
+}
+
+/** 下载时保存的本地封面 */
+async function getAlbumCoverUri(albumId) {
+  const path = `${offlineStorage.decodedAlbumPath(albumId)}/cover.jpg`
+  try {
+    if (!(await offlineStorage.exists(path))) return null
+    return await offlineStorage.getUri(path)
+  } catch {
+    return null
+  }
 }
 
 /** 取该漫画第一张已落盘的图片，作为离线封面 */
@@ -338,12 +349,21 @@ async function getOfflineChapter(chapterId) {
   const chapterPayload = safeParse(chapterRow.payload) || {}
   const chapterName = chapterRow.name || chapterPayload.name || ''
 
+  const albumAuthor = Array.isArray(albumPayload.author)
+    ? albumPayload.author
+    : albumPayload.author
+      ? String(albumPayload.author).split(' & ')
+      : []
+
   return {
     album: {
       ...albumPayload,
-      id: String(chapterRow.id),
-      name: chapterName || albumPayload.name || '',
+      // 保持下载入口的专辑 id，收藏/追踪/评论/下载都依赖它
+      id: albumPayload.id ? String(albumPayload.id) : albumId,
+      name: albumPayload.name || chapterName,
+      author: albumAuthor,
       series,
+      coverUri: await getAlbumCoverUri(albumId),
     },
     chapter: {
       ...chapterPayload,

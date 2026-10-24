@@ -4,12 +4,14 @@ import { useRouter } from 'vue-router'
 const props = defineProps({
   series: { type: Array, default: () => [] },
   currentId: { type: [String, Number], required: true },
+  // 在线页默认 /chapter/，离线页传 /offline/chapter/
+  routePrefix: { type: String, default: '/chapter/' },
 })
 const router = useRouter()
 
 function go(item) {
   if (String(item.id) === String(props.currentId)) return
-  router.push(`/chapter/${item.id}`)
+  router.push(`${props.routePrefix}${item.id}`)
 }
 </script>
 

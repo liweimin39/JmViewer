@@ -72,7 +72,8 @@ async function toggleAlbum(album) {
 }
 
 function openChapter(chapter) {
-  router.push({ name: 'chapter', params: { id: chapter.id } })
+  // 离线阅读走独立页面，不与在线阅读页混用
+  router.push({ name: 'offline-chapter', params: { id: chapter.id } })
 }
 
 async function removeAlbum(album) {

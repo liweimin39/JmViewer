@@ -18,6 +18,11 @@ const router = createRouter({
     { path: '/downloads', name: 'downloads', component: () => import('@/views/DownloadsView.vue') },
     { path: '/offline', name: 'offline', component: () => import('@/views/OfflineView.vue') },
     {
+      path: '/offline/chapter/:id',
+      name: 'offline-chapter',
+      component: () => import('@/views/OfflineChapterView.vue'),
+    },
+    {
       path: '/download/:albumId',
       name: 'download-detail',
       component: () => import('@/views/DownloadDetailView.vue'),

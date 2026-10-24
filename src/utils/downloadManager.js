@@ -249,11 +249,33 @@ class DownloadManager {
       logger.warn('[Download] 写入离线专辑失败:', e)
     }
 
+    // 封面本地化：断网时阅读页仍能显示封面
+    try {
+      await this._saveCover(album.id)
+    } catch (e) {
+      logger.warn('[Download] 保存封面失败:', e)
+    }
+
     await this._saveImmediate()
     this._notifyImmediate()
     this._pump()
 
     return taskId
+  }
+
+  /** 保存专辑封面到本地（已存在则跳过） */
+  async _saveCover(albumId) {
+    const albumDir = offlineStorage.decodedAlbumPath(albumId)
+    const coverPath = `${albumDir}/cover.jpg`
+    if (await offlineStorage.exists(coverPath)) return
+
+    const res = await fetch(jmApi.getCoverImageURL(albumId))
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const buffer = await res.arrayBuffer()
+    if (!buffer || buffer.byteLength === 0) throw new Error('封面响应为空')
+
+    await offlineStorage.ensureDir(albumDir)
+    await offlineStorage.writeBase64(coverPath, arrayBufferToBase64(buffer))
   }
 
   async _pump() {
