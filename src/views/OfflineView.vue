@@ -110,6 +110,8 @@ onMounted(async () => {
   // 初始化下载管理器，删除时才能复用其文件清理逻辑
   try {
     await downloadManager.init()
+    // 旧版本下载没有本地封面，补存后再渲染列表
+    await downloadManager.backfillCovers()
   } catch {}
   await loadAlbums()
 })

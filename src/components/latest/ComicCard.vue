@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { jmApi } from '@/api/JmcomicApi.js'
 import { lazyLoader } from '@/components/general/LazyLoader.js'
 
@@ -9,6 +9,14 @@ const props = defineProps({
 
 const coverRef = ref(null)
 const coverUrl = jmApi.getCoverImageURL(props.comic.id)
+
+// 搜索结果可能是字符串，按 ID 命中的专辑详情是作者数组，统一转成文本
+const authorText = computed(() => {
+  const author = props.comic.author
+  if (!author) return ''
+  if (Array.isArray(author)) return author.filter(Boolean).join(' ')
+  return String(author)
+})
 const DEFAULT_COVER = '/image/cover_default.jpg'
 
 onMounted(() => {
@@ -29,7 +37,7 @@ function onImgError(e) {
       <div class="tags"></div>
     </span>
     <h1 class="c-title">{{ comic.name }}</h1>
-    <h2 class="c-sr-title">{{ comic.author }}</h2>
+    <h2 class="c-sr-title">{{ authorText }}</h2>
   </RouterLink>
 </template>
 

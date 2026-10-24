@@ -103,6 +103,38 @@ class DownloadManager {
     }
 
     this._pump()
+    // 后台补存历史下载缺失的封面，不阻塞启动
+    this.backfillCovers()
+  }
+
+  /** 为已完成的下载补齐本地封面（旧版本下载的数据没有封面） */
+  backfillCovers() {
+    if (!this._backfillPromise) {
+      this._backfillPromise = this._doBackfillCovers().finally(() => {
+        this._backfillPromise = null
+      })
+    }
+    return this._backfillPromise
+  }
+
+  async _doBackfillCovers() {
+    if (!Capacitor.isNativePlatform()) return
+
+    const albumIds = [
+      ...new Set(
+        this.tasks
+          .filter((t) => t.status === DownloadStatus.COMPLETED && t.albumId)
+          .map((t) => String(t.albumId)),
+      ),
+    ]
+
+    for (const albumId of albumIds) {
+      try {
+        await this._saveCover(albumId)
+      } catch (e) {
+        logger.warn('[Download] 补存封面失败:', albumId, e?.message || e)
+      }
+    }
   }
 
   addListener(fn) {
@@ -269,13 +301,36 @@ class DownloadManager {
     const coverPath = `${albumDir}/cover.jpg`
     if (await offlineStorage.exists(coverPath)) return
 
-    const res = await fetch(jmApi.getCoverImageURL(albumId))
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const buffer = await res.arrayBuffer()
-    if (!buffer || buffer.byteLength === 0) throw new Error('封面响应为空')
+    // ★ 只有 imgServers[0] 返回 Access-Control-Allow-Origin: *
+    //   其余封面域名在 WebView 里 fetch 会被 CORS 拦截，所以优先走第一个域名
+    const urls = this._coverUrlCandidates(albumId)
 
-    await offlineStorage.ensureDir(albumDir)
-    await offlineStorage.writeBase64(coverPath, arrayBufferToBase64(buffer))
+    let lastError = null
+    for (const url of urls) {
+      try {
+        const res = await fetch(url)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const buffer = await res.arrayBuffer()
+        if (!buffer || buffer.byteLength === 0) throw new Error('封面响应为空')
+
+        await offlineStorage.ensureDir(albumDir)
+        await offlineStorage.writeBase64(coverPath, arrayBufferToBase64(buffer))
+        return
+      } catch (e) {
+        lastError = e
+      }
+    }
+    throw lastError || new Error('封面下载失败')
+  }
+
+  /** 封面候选地址（第一个域名支持 CORS） */
+  _coverUrlCandidates(albumId) {
+    const hosts = jmApi.imgServers || []
+    const primary = hosts[0]
+    const mapped = hosts[Number(albumId) % 5]
+    return [...new Set([primary, mapped].filter(Boolean))].map(
+      (host) => `https://${host}/media/albums/${albumId}_3x4.jpg`,
+    )
   }
 
   async _pump() {
@@ -309,6 +364,13 @@ class DownloadManager {
       task.currentChapterImageTotal = 0
       this._notifyImmediate()
       await this._saveImmediate()
+
+      // 补存封面：旧任务或建任务时失败的情况在这里重试
+      try {
+        await this._saveCover(task.albumId)
+      } catch (e) {
+        logger.warn('[Download] 保存封面失败:', e?.message || e)
+      }
 
       // ========== 按章节顺序：请求 API → 下载图片 ==========
       for (let ci = 0; ci < chapters.length; ci++) {
