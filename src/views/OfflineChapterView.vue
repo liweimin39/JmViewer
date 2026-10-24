@@ -77,7 +77,7 @@ onBeforeUnmount(() => {
   </div>
 
   <template v-else-if="album && chapter">
-    <ComicHead :album="album" offline @read="scrollToContent" />
+    <ComicHead class="offline-head" :album="album" offline @read="scrollToContent" />
 
     <div class="body">
       <div class="body-left">
@@ -124,5 +124,16 @@ onBeforeUnmount(() => {
   font-size: 14px;
   color: var(--theme-accent-main);
   text-decoration: none;
+}
+
+/* 离线页漫画名使用更紧凑的字号，只作用于本页 */
+@media (min-width: 951px) {
+  .offline-head :deep(.title) {
+    font-size: 20px;
+    line-height: 28px;
+  }
+  .offline-head :deep(.author) {
+    font-size: 14px;
+  }
 }
 </style>
