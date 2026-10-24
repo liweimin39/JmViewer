@@ -47,6 +47,7 @@ public class StoragePermissionPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "checkAllFilesAccess", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "openAllFilesAccess", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearWebCache", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "exitApp", returnType: CAPPluginReturnPromise),
     ]
 
     @objc func openFolder(_ call: CAPPluginCall) {
@@ -104,6 +105,15 @@ public class StoragePermissionPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     // MARK: - 辅助
+
+    /// 主动退出应用
+    /// ⚠️ iOS 无公开退出 API，exit(0) 属于非上架分发（自签名 / 侧载）才可用的做法
+    @objc func exitApp(_ call: CAPPluginCall) {
+        call.resolve()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            exit(0)
+        }
+    }
 
     private func showToast(message: String) {
         DispatchQueue.main.async {

@@ -13,6 +13,11 @@ const router = createRouter({
       component: () => import('@/views/CategoriesView.vue'),
     },
     { path: '/setting', name: 'setting', component: () => import('@/views/SettingView.vue') }, // ← 改动
+    {
+      path: '/about',
+      name: 'about',
+      component: () => import('@/components/setting/AboutView.vue'),
+    },
     { path: '/user', name: 'user', component: () => import('@/views/UserView.vue') },
     { path: '/chapter/:id', name: 'chapter', component: () => import('@/views/ChapterView.vue') },
     { path: '/downloads', name: 'downloads', component: () => import('@/views/DownloadsView.vue') },

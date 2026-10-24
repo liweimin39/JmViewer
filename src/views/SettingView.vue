@@ -4,10 +4,12 @@ import { useRouter } from 'vue-router'
 import LogsPanel from '@/components/setting/LogsPanel.vue'
 import { offlineStorage } from '@/utils/offlineStorage.js'
 import { setting } from '@/components/general/Setting.js'
+import { useDisclaimer } from '@/composables/useDisclaimer.js'
 import '@/styles/setting.css'
 
 const router = useRouter()
 const showLogs = ref(false)
+const { open: openDisclaimer } = useDisclaimer()
 
 // 主题配色：取值与色卡照搬原项目 Jmcomic-webUI
 const theme = ref(setting.app_theme)
@@ -58,6 +60,10 @@ async function handleClearTmp() {
 function goLocalData() {
   router.push({ name: 'setting-local-data' })
 }
+
+function goAbout() {
+  router.push({ name: 'about' })
+}
 </script>
 
 <template>
@@ -65,47 +71,6 @@ function goLocalData() {
     <h1 class="title">设置</h1>
 
     <div class="options">
-      <!-- GitHub 链接 -->
-      <div class="option">
-        <span class="option-label">前往此项目的 github：</span>
-        <a
-          class="option-link"
-          href="https://github.com/liweimin39/JmViewer/"
-          target="_blank"
-          rel="noopener"
-          >liweimin39/JmViewer/</a
-        >
-      </div>
-      <div class="option">
-        <span class="option-label">前往源项目的 github：</span>
-        <a
-          class="option-link"
-          href="https://github.com/zrhcdy/Jmcomic-webUI"
-          target="_blank"
-          rel="noopener"
-          >zrhcdy/Jmcomic-webUI</a
-        >
-      </div>
-
-      <!-- ★ 本地数据管理（可点击，进入独立页面） -->
-      <div class="option option-clickable" @click="goLocalData">
-        <span class="option-label">本地数据管理</span>
-        <svg
-          class="option-arrow"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
-      </div>
-
       <!-- 主题配色 -->
       <div class="option">
         <span class="option-label">主题配色：</span>
@@ -142,10 +107,23 @@ function goLocalData() {
         </p>
       </div>
 
-      <!-- 开发者日志 -->
-      <div class="option">
-        <span class="option-label">开发者日志：</span>
-        <button class="setting-action-btn" @click="showLogs = true">查看 / 导出日志</button>
+      <!-- ★ 本地数据管理（可点击，进入独立页面） -->
+      <div class="option option-clickable" @click="goLocalData">
+        <span class="option-label">本地数据管理</span>
+        <svg
+          class="option-arrow"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
       </div>
 
       <!-- 临时文件 + 网页图片缓存 -->
@@ -155,6 +133,50 @@ function goLocalData() {
         <p class="section-tip">
           同时清理网页缓存的图片（Android / iOS 清理 WebView 缓存，Web 端由浏览器管理）
         </p>
+      </div>
+
+      <!-- 开发者日志 -->
+      <div class="option">
+        <span class="option-label">开发者日志：</span>
+        <button class="setting-action-btn" @click="showLogs = true">查看 / 导出日志</button>
+      </div>
+
+      <!-- 免责声明 -->
+      <div class="option option-clickable" @click="openDisclaimer">
+        <span class="option-label">免责声明</span>
+        <svg
+          class="option-arrow"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </div>
+
+      <!-- 关于 -->
+      <div class="option option-clickable" @click="goAbout">
+        <span class="option-label">关于</span>
+        <svg
+          class="option-arrow"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
       </div>
     </div>
   </div>
