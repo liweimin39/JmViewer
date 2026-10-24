@@ -16,6 +16,7 @@ const router = createRouter({
     { path: '/user', name: 'user', component: () => import('@/views/UserView.vue') },
     { path: '/chapter/:id', name: 'chapter', component: () => import('@/views/ChapterView.vue') },
     { path: '/downloads', name: 'downloads', component: () => import('@/views/DownloadsView.vue') },
+    { path: '/offline', name: 'offline', component: () => import('@/views/OfflineView.vue') },
     {
       path: '/download/:albumId',
       name: 'download-detail',

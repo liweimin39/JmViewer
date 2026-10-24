@@ -15,6 +15,7 @@ const navItems = [
   { name: '最新', to: '/latest' },
   { name: '分类', to: '/categories' },
   { name: '下载', to: '/downloads' },
+  { name: '离线', to: '/offline' },
   { name: '设置', to: '/setting' },
 ]
 

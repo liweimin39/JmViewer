@@ -182,6 +182,90 @@ async function saveChapter(data) {
   return true
 }
 
+// ==================== 读取：离线库列表 ====================
+
+/**
+ * 列出所有已离线的漫画（章节数、占用大小、本地封面）
+ * @returns {Promise<Array>} 不可用时返回空数组
+ */
+async function listAlbums() {
+  const conn = await openDB()
+  if (!conn) return []
+
+  const res = await conn.query(
+    `SELECT a.id, a.name, a.author, a.payload, a.updated_at,
+            COUNT(c.id) AS chapter_count,
+            COALESCE(SUM(c.bytes), 0) AS total_bytes,
+            MAX(c.downloaded_at) AS last_downloaded
+       FROM albums a
+       LEFT JOIN chapters c ON c.album_id = a.id
+      GROUP BY a.id
+      ORDER BY last_downloaded DESC`,
+  )
+
+  const rows = res.values || []
+  return Promise.all(
+    rows.map(async (row) => {
+      const payload = safeParse(row.payload) || {}
+      return {
+        id: String(row.id),
+        name: row.name || payload.name || '',
+        author: normalizeAuthor(row.author),
+        chapterCount: Number(row.chapter_count) || 0,
+        bytes: Number(row.total_bytes) || 0,
+        lastDownloaded: Number(row.last_downloaded) || 0,
+        coverUri: await firstImageUri(row.id),
+      }
+    }),
+  )
+}
+
+/** 取该漫画第一张已落盘的图片，作为离线封面 */
+async function firstImageUri(albumId) {
+  const conn = await openDB()
+  if (!conn) return null
+
+  const res = await conn.query(
+    `SELECT i.file, i.chapter_id
+       FROM images i
+       JOIN chapters c ON c.id = i.chapter_id
+      WHERE c.album_id = ?
+      ORDER BY c.idx, i.idx
+      LIMIT 1`,
+    [String(albumId)],
+  )
+  const row = res.values?.[0]
+  if (!row?.file) return null
+
+  const path = `${offlineStorage.decodedChapterPath(albumId, row.chapter_id)}/${row.file}`
+  try {
+    return await offlineStorage.getUri(path)
+  } catch {
+    return null
+  }
+}
+
+/** 列出某漫画已下载的章节 */
+async function listChapters(albumId) {
+  const conn = await openDB()
+  if (!conn) return []
+
+  const res = await conn.query(
+    `SELECT id, idx, name, image_count, bytes, downloaded_at
+       FROM chapters WHERE album_id = ? ORDER BY idx`,
+    [String(albumId)],
+  )
+
+  return (res.values || []).map((row) => ({
+    id: String(row.id),
+    idx: Number(row.idx) || 0,
+    name: row.name || '',
+    imageCount: Number(row.image_count) || 0,
+    bytes: Number(row.bytes) || 0,
+    downloadedAt: Number(row.downloaded_at) || 0,
+  }))
+}
+
 /** 删除专辑及其章节、图片记录 */
 async function deleteAlbum(albumId) {
   const conn = await openDB()
@@ -366,6 +450,8 @@ export const offlineDB = {
   saveChapter,
   deleteAlbum,
   getOfflineChapter,
+  listAlbums,
+  listChapters,
 
   saveTasks,
   loadTasks,
