@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { jmApi } from '@/api/JmcomicApi.js'
 import { offlineStorage } from './offlineStorage.js'
+import { offlineDB } from './offlineDB.js'
 import { logger } from './logger.js'
 import { ImageCutter } from '@/components/chapter/ImageCutter.js'
 
@@ -66,7 +67,7 @@ class DownloadManager {
       await offlineStorage.initDirs()
       await offlineStorage.clearTmp()
 
-      const saved = await offlineStorage.loadTasks()
+      const saved = await this._loadPersistedTasks()
 
       this.tasks = saved.map((t) => {
         const hasChapters = Array.isArray(t._chapters) && t._chapters.length > 0
@@ -141,11 +142,7 @@ class DownloadManager {
     if (this._saveTimer) return
     this._saveTimer = setTimeout(async () => {
       this._saveTimer = null
-      try {
-        await offlineStorage.saveTasks(this._cleanTasksForSave())
-      } catch (e) {
-        logger.warn('[Download] 保存任务失败:', e)
-      }
+      await this._persistTasks()
     }, SAVE_THROTTLE_MS)
   }
 
@@ -154,11 +151,45 @@ class DownloadManager {
       clearTimeout(this._saveTimer)
       this._saveTimer = null
     }
+    await this._persistTasks()
+  }
+
+  /** 原生端写入 SQLite；不可用时回退 download-tasks.json */
+  async _persistTasks() {
+    const tasks = this._cleanTasksForSave()
     try {
-      await offlineStorage.saveTasks(this._cleanTasksForSave())
+      const saved = await offlineDB.saveTasks(tasks)
+      if (saved) return
     } catch (e) {
-      logger.warn('[Download] 保存任务失败:', e)
+      logger.warn('[Download] SQLite 保存任务失败:', e)
     }
+    try {
+      await offlineStorage.saveTasks(tasks)
+    } catch (e) {
+      logger.warn('[Download] 保存任务文件失败:', e)
+    }
+  }
+
+  /** 读取任务：优先 SQLite，空库时迁移旧的 download-tasks.json */
+  async _loadPersistedTasks() {
+    let saved = null
+    try {
+      saved = await offlineDB.loadTasks()
+    } catch (e) {
+      logger.warn('[Download] SQLite 读取任务失败:', e)
+    }
+
+    if (saved === null) return await offlineStorage.loadTasks()
+
+    if (saved.length === 0) {
+      const legacy = await offlineStorage.loadTasks()
+      if (legacy.length > 0) {
+        await offlineDB.saveTasks(legacy)
+        return legacy
+      }
+    }
+
+    return saved
   }
 
   _cleanTasksForSave() {
@@ -210,6 +241,14 @@ class DownloadManager {
     }
 
     this.tasks.unshift(task)
+
+    // 记录专辑元数据，供离线阅读构造 album 信息
+    try {
+      await offlineDB.saveAlbum(album, chapters)
+    } catch (e) {
+      logger.warn('[Download] 写入离线专辑失败:', e)
+    }
+
     await this._saveImmediate()
     this._notifyImmediate()
     this._pump()
@@ -527,6 +566,30 @@ class DownloadManager {
       }
     }
 
+    // 章节完成：把图片顺序与元数据写入 SQLite（文件大小以磁盘为准）
+    try {
+      const files = await offlineStorage.listDir(decodedDir)
+      const sizeMap = new Map(
+        files.filter((f) => f.type !== 'directory').map((f) => [f.name, f.size || 0]),
+      )
+      const imageRows = images.map((originalName, idx) => {
+        const file = getDecodedName(originalName, chapterId)
+        return { idx, source: originalName, file, bytes: sizeMap.get(file) || 0 }
+      })
+
+      const { images: _ignored, ...chapterMeta } = chapter
+      await offlineDB.saveChapter({
+        albumId,
+        id: chapterId,
+        idx: chapterIndex,
+        name: chapter.name || `第${chapterIndex + 1}章`,
+        payload: chapterMeta,
+        images: imageRows,
+      })
+    } catch (e) {
+      logger.warn('[Download] 写入离线章节失败:', e)
+    }
+
     task.progress = Math.round(((chapterIndex + 1) / totalChapters) * 90)
     task.message = `第 ${task.currentChapterIndex}/${totalChapters} 章 完成`
     this._notifyImmediate()
@@ -580,6 +643,11 @@ class DownloadManager {
 
     if (task.albumId) {
       await offlineStorage.remove(offlineStorage.decodedAlbumPath(task.albumId))
+      try {
+        await offlineDB.deleteAlbum(task.albumId)
+      } catch (e) {
+        logger.warn('[Download] 清理离线数据失败:', e)
+      }
     }
     if (task.outputPath) {
       await offlineStorage.remove(task.outputPath)
@@ -645,6 +713,11 @@ class DownloadManager {
     for (const t of completed) {
       if (t.albumId) {
         await offlineStorage.remove(offlineStorage.decodedAlbumPath(t.albumId))
+        try {
+          await offlineDB.deleteAlbum(t.albumId)
+        } catch (e) {
+          logger.warn('[Download] 清理离线数据失败:', e)
+        }
       }
       if (t.outputPath) {
         await offlineStorage.remove(t.outputPath)

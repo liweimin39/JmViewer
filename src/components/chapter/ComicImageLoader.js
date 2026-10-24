@@ -1,4 +1,6 @@
+import { Capacitor } from '@capacitor/core'
 import { jmApi } from '@/api/JmcomicApi.js'
+import { offlineStorage } from '@/utils/offlineStorage.js'
 import { ImageCutter } from './ImageCutter.js'
 import { Queue } from '@/components/general/Queue.js'
 import { setting } from '@/components/general/Setting.js'
@@ -81,6 +83,13 @@ export class ComicImageLoader {
 
     this.loadingMap.set(container, 'loading')
 
+    // ★ 离线章节：图片已解密并落盘，直接用本地文件渲染
+    const localPath = container.dataset.local
+    if (localPath) {
+      this.#loadLocal(container, localPath)
+      return
+    }
+
     // ★ 加载方式由设置项 img_load_mode 决定（切换后重新进入章节生效）：
     //   direct = 原实现；blob = fetch 取字节 → Blob → objectURL 渲染
     if (setting.img_load_mode === 'blob') {
@@ -92,6 +101,40 @@ export class ComicImageLoader {
 
   #needDecrypt(path) {
     return this.id >= 220980 && !path.endsWith('.gif')
+  }
+
+  /* ---------------- 离线加载：本地文件直读（下载时已解密） ---------------- */
+
+  async #loadLocal(container, localPath) {
+    try {
+      const uri = await offlineStorage.getUri(localPath)
+      const img = new Image()
+      img.decoding = 'async'
+      img.style.cssText = IMG_STYLE
+
+      const timeoutId = setTimeout(() => {
+        if (!img.complete) {
+          img.src = ''
+          this.#handleLoadError(container, '本地图片加载超时')
+        }
+      }, LOAD_TIMEOUT)
+
+      img.onload = () => {
+        clearTimeout(timeoutId)
+        container.innerHTML = ''
+        container.appendChild(img)
+        this.#finalizeLoad(container)
+      }
+
+      img.onerror = () => {
+        clearTimeout(timeoutId)
+        this.#handleLoadError(container, '本地图片加载失败')
+      }
+
+      img.src = Capacitor.convertFileSrc(uri)
+    } catch (error) {
+      this.#handleLoadError(container, error?.message || '本地图片读取失败')
+    }
   }
 
   /* ---------------- 原加载方式：Image 直链 + toDataURL ---------------- */

@@ -99,6 +99,7 @@ watch(
         class="comic-img"
         :data-path="path"
         :data-index="i"
+        :data-local="chapter.localFiles?.[i]"
       >
         <div class="img-placeholder">
           {{ path }}

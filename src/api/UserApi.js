@@ -103,6 +103,12 @@ class UserApi {
     // 有加密数据 → 解密
     if (json.data) {
       const decrypted = this._decryptData(json.data)
+      // 接口返回原文提示文本时，由 code 表示业务结果
+      if (typeof decrypted === 'string' && Number(json.code) >= 400) {
+        const err = new Error(decrypted || `请求失败 (code ${json.code})`)
+        err.__businessError = true
+        throw err
+      }
       if (decrypted && typeof decrypted === 'object') {
         if (decrypted.errorMsg && decrypted.errorMsg.trim() !== '') {
           const msg = Array.isArray(decrypted.errorMsg)

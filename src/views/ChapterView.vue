@@ -11,6 +11,7 @@ import ComicContent from '@/components/chapter/ComicContent.vue'
 import { useLocalUser } from '@/composables/useLocalUser.js'
 import { useUser } from '@/composables/useUser.js'
 import { localDB } from '@/utils/localDB.js'
+import { offlineDB } from '@/utils/offlineDB.js'
 import '@/styles/chapter.css'
 
 const route = useRoute()
@@ -105,10 +106,27 @@ async function loadAll() {
   album.value = null
   chapter.value = null
   try {
-    const [a, c] = await Promise.all([
-      jmApi.getComicAlbum(comicId.value),
-      jmApi.getComicChapter(comicId.value),
-    ])
+    let a = null
+    let c = null
+
+    // 本地优先：已下载到 SQLite 的章节直接读取，断网可用
+    let offline = null
+    try {
+      offline = await offlineDB.getOfflineChapter(comicId.value)
+    } catch (e) {
+      console.warn('[Offline] 读取本地章节失败:', e)
+    }
+
+    if (offline) {
+      a = offline.album
+      c = offline.chapter
+    } else {
+      ;[a, c] = await Promise.all([
+        jmApi.getComicAlbum(comicId.value),
+        jmApi.getComicChapter(comicId.value),
+      ])
+    }
+
     album.value = a
     chapter.value = c
 
