@@ -18,11 +18,18 @@ const chapterId = computed(() => String(route.params.id))
 
 function addRootClass() {
   const root = document.querySelector('.root')
-  if (root) root.classList.add('chapter-page-bg')
+  if (root) {
+    root.classList.add('chapter-page-bg')
+    // 复用在线阅读页的 page-chapter 布局规则，保证标题字号等完全一致
+    root.classList.add('page-chapter')
+  }
 }
 function removeRootClass() {
   const root = document.querySelector('.root')
-  if (root) root.classList.remove('chapter-page-bg')
+  if (root) {
+    root.classList.remove('chapter-page-bg')
+    root.classList.remove('page-chapter')
+  }
 }
 
 /** 只读本地 SQLite 与磁盘文件，不做任何在线回退 */
@@ -77,7 +84,7 @@ onBeforeUnmount(() => {
   </div>
 
   <template v-else-if="album && chapter">
-    <ComicHead class="offline-head" :album="album" offline @read="scrollToContent" />
+    <ComicHead :album="album" offline @read="scrollToContent" />
 
     <div class="body">
       <div class="body-left">
@@ -124,16 +131,5 @@ onBeforeUnmount(() => {
   font-size: 14px;
   color: var(--theme-accent-main);
   text-decoration: none;
-}
-
-/* 离线页漫画名使用更紧凑的字号，只作用于本页 */
-@media (min-width: 951px) {
-  .offline-head :deep(.title) {
-    font-size: 20px;
-    line-height: 28px;
-  }
-  .offline-head :deep(.author) {
-    font-size: 14px;
-  }
 }
 </style>
