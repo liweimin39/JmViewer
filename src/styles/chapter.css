@@ -2,6 +2,33 @@
   background: linear-gradient(120deg, var(--theme-border-light) 0, transparent 700px);
 }
 
+/* ============ 阅读页返回栏 ============ */
+.reader-back-bar {
+  width: 1100px;
+  margin: 12px auto 0;
+}
+
+.reader-back-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px 6px 8px;
+  border: none;
+  border-radius: 16px;
+  background-color: var(--theme-primary-light);
+  color: var(--theme-text-strong);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.reader-back-btn:hover {
+  background-color: var(--theme-primary-soft);
+}
+.reader-back-btn svg {
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
 /* ============ 头部（上下两块） ============ */
 .head {
   display: flex;
@@ -263,6 +290,7 @@
   background: radial-gradient(circle at center, var(--theme-warning-bg) 0%, transparent 100%);
 }
 .cr-head {
+  position: relative;
   display: flex;
   width: 100%;
   height: 60px;
@@ -462,6 +490,9 @@
   .page-chapter .body {
     width: 1000px;
   }
+  .reader-back-bar {
+    width: 1000px;
+  }
 }
 @media screen and (max-width: 1100px) {
   .cover {
@@ -478,6 +509,11 @@
   }
   .page-chapter .body {
     width: 100%;
+  }
+  .reader-back-bar {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 12px;
   }
 }
 @media screen and (max-width: 950px) {
@@ -862,4 +898,252 @@
 .action-btn.loading {
   opacity: 0.6;
   pointer-events: none;
+}
+
+/* ==================== 全屏阅读模式 ==================== */
+
+.reader-enter-btn {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 17px;
+  background-color: rgba(0, 0, 0, 0.18);
+  color: var(--theme-text-inverse);
+  font-size: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.reader-enter-btn:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.comic-img-cr.fullscreen-reader {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: 100vw;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 200;
+  background-color: #000000;
+}
+.comic-img-cr.fullscreen-reader .comic-img {
+  width: var(--reader-img-width, 100%);
+  margin: 0 auto;
+}
+
+/* 退出按钮 */
+.reader-exit-btn {
+  position: fixed;
+  right: 20px;
+  top: 20px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 210;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+.reader-exit-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+.reader-exit-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* 底部进度条 */
+.reader-bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  z-index: 210;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+.reader-progress-cr {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  padding-right: 12px;
+}
+.reader-progress-track {
+  flex: 1;
+  height: 4px;
+  min-width: 0;
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.reader-progress-fill {
+  height: 100%;
+  width: 0;
+  background-color: var(--theme-accent-main);
+  border-radius: 4px;
+  transition: width 0.15s;
+}
+.reader-progress-text {
+  font-size: 13px;
+  color: #ffffff;
+  white-space: nowrap;
+  min-width: 60px;
+  text-align: right;
+  margin-left: 12px;
+}
+.reader-settings-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 4px;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.reader-settings-btn:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+.reader-settings-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* 阅读内设置面板 */
+.reader-settings-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 60px;
+  width: 260px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  z-index: 220;
+  background-color: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+.reader-setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #ffffff;
+  font-size: 14px;
+}
+.reader-setting-item + .reader-setting-item {
+  margin-top: 14px;
+}
+.reader-setting-control {
+  display: flex;
+  align-items: center;
+}
+.reader-width-slider {
+  width: 100px;
+  height: 4px;
+  cursor: pointer;
+  accent-color: var(--theme-accent-main);
+  margin-right: 8px;
+}
+.reader-width-slider:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.reader-width-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 36px;
+}
+
+/* 横向显示开关 */
+.reader-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.reader-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.reader-toggle-slider {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 24px;
+}
+.reader-toggle-slider::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.15s;
+}
+.reader-toggle input:checked + .reader-toggle-slider {
+  background-color: var(--theme-accent-main);
+}
+.reader-toggle input:checked + .reader-toggle-slider::before {
+  transform: translateX(20px);
+}
+
+/* 横向翻页布局 */
+.comic-img-cr.reader-horizontal {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-y: hidden;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.reader-horizontal::-webkit-scrollbar {
+  display: none;
+}
+.reader-horizontal .comic-img {
+  flex: 0 0 100vw;
+  width: 100vw;
+  min-width: 100vw;
+  height: 100vh;
+  min-height: 0;
+  margin: 0;
+  scroll-snap-align: start;
+}
+.reader-horizontal .comic-img img,
+.reader-horizontal .comic-img .img-placeholder,
+.reader-horizontal .comic-img .reader-error {
+  width: 100% !important;
+  height: 100% !important;
+}
+.reader-horizontal .comic-img img {
+  object-fit: contain;
 }

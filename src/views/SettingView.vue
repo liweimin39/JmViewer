@@ -20,6 +20,7 @@ const themeOptions = [
   { value: 'purple', name: '紫色', color: '#d9c6f5' },
   { value: 'gray', name: '灰白', color: '#b8b8b8' },
   { value: 'dark', name: '深色', color: '#3a2830' },
+  { value: 'orange', name: '橙色', color: '#f0b890' },
 ]
 
 function pickTheme(value) {
@@ -37,6 +38,11 @@ const loadModes = [
 function pickLoadMode(value) {
   setting.setOption('img_load_mode', value)
   loadMode.value = value
+}
+
+// 漫画阅读设置已拆到独立页面（参考 LocalDataSettings）
+function goReader() {
+  router.push({ name: 'setting-reader' })
 }
 
 async function handleClearTmp() {
@@ -105,6 +111,25 @@ function goAbout() {
         <p class="section-tip">
           Blob 加载：先取图片字节再渲染，可避免解密失败与 base64 内存膨胀；切换后重新进入章节生效
         </p>
+      </div>
+
+      <!-- ★ 漫画阅读（可点击，进入独立页面） -->
+      <div class="option option-clickable" @click="goReader">
+        <span class="option-label">漫画阅读</span>
+        <svg
+          class="option-arrow"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
       </div>
 
       <!-- ★ 本地数据管理（可点击，进入独立页面） -->

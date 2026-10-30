@@ -39,7 +39,7 @@ export class ComicImageLoader {
           }
         }
       },
-      { rootMargin: '300px' },
+      { rootMargin: setting.root_margin || '300px' },
     )
 
     this.progressObserver = new IntersectionObserver(

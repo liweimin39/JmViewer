@@ -37,6 +37,11 @@ const router = createRouter({
       name: 'setting-local-data',
       component: () => import('@/components/setting/LocalDataSettings.vue'),
     },
+    {
+      path: '/setting/ReaderSettings',
+      name: 'setting-reader',
+      component: () => import('@/components/setting/ReaderSettings.vue'),
+    },
   ],
   scrollBehavior(to, from, savedPosition) {
     return savedPosition || { top: 0 }

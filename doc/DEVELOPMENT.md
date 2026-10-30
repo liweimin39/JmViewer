@@ -65,7 +65,7 @@ src/
 │   ├── download/            DownloadItem · ChapterSelector · StoragePermissionGate
 │   ├── general/             NavBar · Carousel · LazyLoader · Queue · Setting.js
 │   ├── index/ latest/       首页与卡片
-│   ├── setting/             SettingView 子组件：AboutView · LocalDataSettings · DisclaimerOverlay
+│   ├── setting/             SettingView 子组件：AboutView · LocalDataSettings · ReaderSettings · DisclaimerOverlay
 │   └── user/                用户中心组件
 ├── composables/             useUser · useLocalUser · useDisclaimer · useStoragePermission · useBackButton
 ├── router/index.js
@@ -253,10 +253,18 @@ iOS（`Directory.Documents`，文件 App 可见）：同结构，无 `JmViewer/`
 | 键 | 取值 |
 |---|---|
 | `using_imgserver_index` | `"0"` ~ `"5"`（图片 CDN 索引） |
-| `app_theme` | 6 套主题之一，写入 `<html>` 的 `{theme}-theme` 类 |
+| `app_theme` | 7 套主题之一（pink/blue/green/purple/gray/dark/orange），写入 `<html>` 的 `{theme}-theme` 类 |
 | `img_load_mode` | `direct` / `blob` |
+| `root_margin` | 图片懒加载 `IntersectionObserver` 的 `rootMargin`，默认 `200px` |
+| `reader_image_width` | 全屏阅读图片宽度百分比，`50` ~ `100`，默认 `100` |
+| `reader_is_horizontal` | `off` / `on`，全屏阅读是否横向整屏翻页 |
+| `auto_fullscreen_reader` | `off` / `on`，点击「开始阅读」后是否直接进入全屏阅读 |
 
 `init()` 读取时校验合法值，非法则回写默认值；`setOption()` 校验后写库。新增设置项需同时补齐默认值与 UI。
+
+阅读相关的 4 项在独立页面 [ReaderSettings.vue](../src/components/setting/ReaderSettings.vue)（路由 `setting-reader`），设置首页只保留入口。
+
+主题变量定义在 [theme.css](../src/styles/theme.css)：`:root` 为默认粉色，其余主题以 `.{theme}-theme` 覆盖同名 CSS 变量。
 
 ---
 

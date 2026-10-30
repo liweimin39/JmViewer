@@ -11,10 +11,13 @@ import ComicContent from '@/components/chapter/ComicContent.vue'
 import { useLocalUser } from '@/composables/useLocalUser.js'
 import { useUser } from '@/composables/useUser.js'
 import { localDB } from '@/utils/localDB.js'
+import { setting } from '@/components/general/Setting.js'
 import '@/styles/chapter.css'
 
 const route = useRoute()
 const router = useRouter()
+
+const comicContentRef = ref(null)
 
 const album = ref(null)
 const chapter = ref(null)
@@ -140,7 +143,19 @@ async function loadAll() {
   }
 }
 
+function goBack() {
+  if (window.history.state && window.history.state.position > 0) {
+    router.back()
+  } else {
+    router.push({ name: 'home' })
+  }
+}
+
 function scrollToContent() {
+  if (setting.auto_fullscreen_reader === 'on' && comicContentRef.value?.enterReader) {
+    comicContentRef.value.enterReader()
+    return
+  }
   document.querySelector('.comic-content-cr')?.scrollIntoView({ behavior: 'smooth' })
 }
 
@@ -176,6 +191,26 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <!-- 返回栏 -->
+  <div class="reader-back-bar">
+    <button class="reader-back-btn" @click="goBack" aria-label="返回">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        width="20"
+        height="20"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <polyline points="15 18 9 12 15 6" />
+      </svg>
+      <span>返回</span>
+    </button>
+  </div>
+
   <div v-if="loading" class="chapter-page-loading">
     <div class="loading-icon"></div>
   </div>
@@ -204,7 +239,7 @@ onBeforeUnmount(() => {
           @download="onDownloadChapter"
         />
 
-        <ComicContent :chapter="chapter" />
+        <ComicContent ref="comicContentRef" :chapter="chapter" />
       </div>
 
       <div class="body-right">
