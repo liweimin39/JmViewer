@@ -2,33 +2,6 @@
   background: linear-gradient(120deg, var(--theme-border-light) 0, transparent 700px);
 }
 
-/* ============ 阅读页返回栏 ============ */
-.reader-back-bar {
-  width: 1100px;
-  margin: 12px auto 0;
-}
-
-.reader-back-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 14px 6px 8px;
-  border: none;
-  border-radius: 16px;
-  background-color: var(--theme-primary-light);
-  color: var(--theme-text-strong);
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.reader-back-btn:hover {
-  background-color: var(--theme-primary-soft);
-}
-.reader-back-btn svg {
-  flex-shrink: 0;
-  margin-right: 2px;
-}
-
 /* ============ 头部（上下两块） ============ */
 .head {
   display: flex;
@@ -490,9 +463,6 @@
   .page-chapter .body {
     width: 1000px;
   }
-  .reader-back-bar {
-    width: 1000px;
-  }
 }
 @media screen and (max-width: 1100px) {
   .cover {
@@ -509,11 +479,6 @@
   }
   .page-chapter .body {
     width: 100%;
-  }
-  .reader-back-bar {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0 12px;
   }
 }
 @media screen and (max-width: 950px) {
