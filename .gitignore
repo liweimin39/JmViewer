@@ -14,8 +14,7 @@ dist-ssr
 coverage
 *.local
 .trae
-doc
-
+Jmcomic-webUI
 
 # Editor directories and files
 .vscode/*

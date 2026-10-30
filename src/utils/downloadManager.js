@@ -720,27 +720,58 @@ class DownloadManager {
     this._pump()
   }
 
-  async remove(taskId) {
+  /**
+   * 删除下载任务
+   * @param {string} taskId 任务 id
+   * @param {{deleteFiles?: boolean}} options deleteFiles=true 时同时删除本地图片与离线数据
+   *   - 原生端：默认删除记录 + 本地文件 + 离线数据
+   *   - Web 端：ZIP 由浏览器管理，始终只删除记录
+   */
+  async remove(taskId, { deleteFiles = true } = {}) {
     const idx = this.tasks.findIndex((t) => t.id === taskId)
     if (idx === -1) return
     const task = this.tasks[idx]
 
-    if (task.albumId) {
-      await offlineStorage.remove(offlineStorage.decodedAlbumPath(task.albumId))
+    const failed = []
+    const native = Capacitor.isNativePlatform()
+    const cleanFiles = native && deleteFiles && task.albumId
+
+    if (cleanFiles) {
+      try {
+        const ok = await offlineStorage.remove(offlineStorage.decodedAlbumPath(task.albumId))
+        if (ok === false) failed.push('漫画文件')
+      } catch (e) {
+        logger.warn('[Download] 删除本地文件失败:', e)
+        failed.push('漫画文件')
+      }
+
       try {
         await offlineDB.deleteAlbum(task.albumId)
       } catch (e) {
         logger.warn('[Download] 清理离线数据失败:', e)
+        failed.push('离线数据')
+      }
+
+      if (task.outputPath && task.outputPath !== offlineStorage.decodedAlbumPath(task.albumId)) {
+        try {
+          await offlineStorage.remove(task.outputPath)
+        } catch (e) {
+          logger.warn('[Download] 删除输出目录失败:', e)
+        }
       }
     }
-    if (task.outputPath) {
-      await offlineStorage.remove(task.outputPath)
-    }
+
+    // 释放 Web 端内存中的 ZIP 引用
+    if (task._zipBlob) task._zipBlob = null
 
     this.tasks.splice(idx, 1)
     this.running.delete(taskId)
     this._notifyImmediate()
     await this._saveImmediate()
+
+    if (failed.length) {
+      throw new Error(`${failed.join('、')}删除失败，记录已移除`)
+    }
   }
 
   /**
@@ -792,24 +823,19 @@ class DownloadManager {
     return { type: 'folder' }
   }
 
+  /** 清空已完成：逐条删除本地文件与离线数据，Web 端仅删记录 */
   async clearCompleted() {
-    const completed = this.tasks.filter((t) => t.status === DownloadStatus.COMPLETED)
-    for (const t of completed) {
-      if (t.albumId) {
-        await offlineStorage.remove(offlineStorage.decodedAlbumPath(t.albumId))
-        try {
-          await offlineDB.deleteAlbum(t.albumId)
-        } catch (e) {
-          logger.warn('[Download] 清理离线数据失败:', e)
-        }
-      }
-      if (t.outputPath) {
-        await offlineStorage.remove(t.outputPath)
+    const completedIds = this.tasks
+      .filter((t) => t.status === DownloadStatus.COMPLETED)
+      .map((t) => t.id)
+
+    for (const id of completedIds) {
+      try {
+        await this.remove(id)
+      } catch (e) {
+        logger.warn('[Download] 清空已完成失败:', id, e?.message || e)
       }
     }
-    this.tasks = this.tasks.filter((t) => t.status !== DownloadStatus.COMPLETED)
-    this._notifyImmediate()
-    await this._saveImmediate()
   }
 
   getTasks() {

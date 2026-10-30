@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import { downloadManager, DownloadStatus } from '@/utils/downloadManager.js'
 import { useStoragePermission } from '@/composables/useStoragePermission.js'
 import DownloadItem from '@/components/download/DownloadItem.vue'
@@ -9,6 +10,8 @@ import '@/styles/download.css'
 const tasks = ref([])
 const activeTab = ref('all')
 const showPermGate = ref(false)
+const removeTarget = ref(null)
+const removing = ref(false)
 let unsubscribe = null
 
 const { check: checkPerm, platform } = useStoragePermission()
@@ -49,6 +52,43 @@ async function handleOpenOutput(taskId) {
     await downloadManager.openOutput(taskId)
   } catch (e) {
     alert('操作失败：' + (e?.message || '未知错误'))
+  }
+}
+
+/**
+ * 删除下载任务
+ * 原生已完成任务：弹窗让用户选择「仅删除记录」或「删除记录和本地文件」
+ * Web / 已取消任务：本地文件不归应用管理，只能删除记录
+ */
+function handleRemove(taskId) {
+  const task = tasks.value.find((t) => t.id === taskId)
+  if (!task) return
+
+  const canDeleteFiles =
+    Capacitor.isNativePlatform() && task.status === DownloadStatus.COMPLETED && task.albumId
+
+  if (canDeleteFiles) {
+    removeTarget.value = task
+    return
+  }
+
+  const tip =
+    Capacitor.isNativePlatform() && task.status === DownloadStatus.COMPLETED
+      ? '删除该下载记录？（本地文件仍保留）'
+      : '删除该下载记录？'
+  if (window.confirm(tip)) doRemove(taskId, false)
+}
+
+async function doRemove(taskId, deleteFiles) {
+  if (removing.value) return
+  removing.value = true
+  try {
+    await downloadManager.remove(taskId, { deleteFiles })
+    removeTarget.value = null
+  } catch (e) {
+    alert('删除失败：' + (e?.message || '未知错误'))
+  } finally {
+    removing.value = false
   }
 }
 
@@ -118,7 +158,7 @@ onBeforeUnmount(() => {
         @pause="downloadManager.pause($event)"
         @resume="downloadManager.resume($event)"
         @cancel="downloadManager.cancel($event)"
-        @remove="downloadManager.remove($event)"
+        @remove="handleRemove"
         @download="handleOpenOutput"
       />
     </div>
@@ -128,5 +168,24 @@ onBeforeUnmount(() => {
       @granted="onPermGranted"
       @cancel="showPermGate = false"
     />
+
+    <!-- 删除方式选择 -->
+    <div v-if="removeTarget" class="dl-modal-overlay" @click.self="removeTarget = null">
+      <div class="dl-modal">
+        <h3 class="dl-modal-title">删除「{{ removeTarget.albumName || '该任务' }}」</h3>
+        <p class="dl-modal-desc">
+          仅删除记录时，已下载的图片仍保留，可在离线库继续阅读；删除本地文件后不可恢复。
+        </p>
+        <div class="dl-modal-actions">
+          <button class="dl-modal-btn record" :disabled="removing" @click="doRemove(removeTarget.id, false)">
+            仅删除下载记录
+          </button>
+          <button class="dl-modal-btn files" :disabled="removing" @click="doRemove(removeTarget.id, true)">
+            删除记录和本地文件
+          </button>
+        </div>
+        <button class="dl-modal-cancel" :disabled="removing" @click="removeTarget = null">取消</button>
+      </div>
+    </div>
   </div>
 </template>

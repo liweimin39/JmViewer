@@ -1,348 +1,174 @@
 # JmViewer
 
-基于 [Jmcomic-webUI](https://github.com/zrhcdy/Jmcomic-webUI) 重构的跨平台漫画阅读器，支持 Web / Android / iOS 三端。
+基于 [Jmcomic-webUI](https://github.com/zrhcdy/Jmcomic-webUI) 重构的跨平台漫画阅读器，支持 **Web / Android / iOS** 三端。
 
-原项目是纯 HTML + 原生 JS，本项目用 **Vue 3 + Vite + Capacitor** 全面重写，具备完整的 SPA 路由、组件化架构、离线数据管理、图片解密、下载打包等能力，并通过 GitHub Actions 自动化构建发布。
+原项目为纯 HTML + 原生 JS，本项目用 **Vue 3 + Vite + Capacitor** 重写，具备 SPA 路由、组件化架构、图片解密、下载管理与 SQLite 离线阅读，并通过 GitHub Actions 自动构建发布。
+
+> 本项目只是一个界面，不含任何内容。详见下方[免责声明](#免责声明)。
 
 ---
 
 ## 功能特性
 
-### 核心浏览
+### 浏览与阅读
 
 - 首页 Banner 轮播、推荐分区、标签快捷入口
 - 最新 / 分类 / 搜索 / 章节列表
-- 漫画图片加解密（Canvas 切片还原）
-- 阅读进度条拖拽 / 触摸拖动
-- 图片懒加载（`IntersectionObserver`）
+- 漫画图片 Canvas 切片解密还原
+- 图片懒加载（`IntersectionObserver`），直链 / Blob 两种加载方式可切换
+- 阅读进度条拖拽与触摸跳转
 
 ### 账号系统
 
-- **云端账号**：登录 / 注册 / 忘记密码，收藏、追踪、信箱、已读未读切换
+- **云端账号**：登录 / 注册 / 找回密码，收藏、追踪、信箱、已读切换
 - **本地账号**：默认单账号，可改名，数据存 IndexedDB
-- 云端 / 本地账号自由切换，收藏独立存储
-- **浏览历史本地与云端共享**，跨账号保留
+- 云端 / 本地账号自由切换，收藏按账号独立
+- 浏览历史跨账号共享
 
-### 下载管理
+### 下载与离线
 
-- 章节选择（全选 / 不全选 / 反选 ）
-- 队列并发下载 + 断点续传 + 失败自动重试
-- 按章节流水线处理（请求 API → 下载图片）
+- 章节选择（全选 / 反选 / 不全选）
+- 队列并发下载、断点续传、失败自动重试
 - 实时进度（章节 + 图片双维度）
-- 图片解密后保存，原生端直接打开文件夹
-- 下载时同步保存封面与元数据到本地 SQLite
+- 下载时同步保存封面与元数据到 SQLite
+- **离线库**：按漫画汇总章节数与占用空间，支持单部删除
+- **离线阅读**：独立页面，纯本地读取，断网可用
 
-### 离线阅读
+### 数据与设置
 
-- **离线库**：按漫画汇总已下载章节与占用空间，支持单部删除
-- 离线阅读为独立页面，完全读取本地 SQLite + 文件系统，断网可用
-- 离线页只展示已下载章节，不加载评论、推荐等在线内容
-
-### 数据管理
-
-- 收藏 / 历史 JSON 导出与导入
-- 历史批量删除
+- 收藏 / 历史 JSON 导出与导入，历史批量删除
 - 临时文件清理（含 WebView 图片缓存）
-- 开发者日志自动记录 / 保存 / 导出
+- 6 套主题配色、图源切换
+- 开发者日志自动记录 / 导出
 - 免责声明首次启动弹窗，设置页可重新查看
 - 关于页展示版本、项目地址与技术栈
 
 ### 原生能力
 
-- Android 物理返回键拦截（应用内后退 + 双击退出）
-- Android 存储权限引导（Android 11+ `MANAGE_EXTERNAL_STORAGE`）
+- Android 返回键拦截（应用内后退 + 双击退出）
+- Android 存储权限引导（Android 11+）
 - Android 优先唤醒 MT 管理器，降级系统文件管理器
 - iOS 系统「文件」App 集成（`shareddocuments://`）
-- 自定义 App 图标 + 启动屏
-- 图源切换
-- 多套主题配色、图片加载方式切换
+- 自定义 App 图标与启动屏
 
 ---
 
 ## 技术栈
 
-| 分类         | 技术                                                  |
-| ------------ | ----------------------------------------------------- |
-| **框架**     | Vue 3（Composition API）+ Vue Router                  |
-| **构建**     | Vite                                                  |
-| **原生容器** | Capacitor 8                                           |
-| **加密**     | crypto-js（AES / MD5）                                |
-| **压缩**     | JSZip（Web 端）                                       |
-| **存储**     | SQLite（离线漫画）+ IndexedDB（本地账号）+ localStorage（设置） |
-| **CI/CD**    | GitHub Actions                                        |
-| **样式**     | 原生 CSS（按页面命名空间隔离）                        |
+| 分类 | 技术 |
+|---|---|
+| 框架 | Vue 3（Composition API）+ Vue Router 5 |
+| 构建 | Vite 8 |
+| 原生容器 | Capacitor 8 |
+| 存储 | SQLite（离线漫画）+ IndexedDB（本地账号）+ localStorage（设置） |
+| 加密 / 压缩 | crypto-js（AES / MD5）、JSZip（Web 端） |
+| CI/CD | GitHub Actions |
+
+---
+
+## 快速开始
+
+**环境要求**：Node.js ≥ 22；Android 构建需 Android Studio；iOS 构建需 macOS + Xcode。
+
+```bash
+npm install
+npm run dev      # 开发服务器，默认 http://localhost:5173
+npm run build    # 构建 Web 产物到 dist/
+```
+
+同步原生工程：
+
+```bash
+npm run build
+npx cap sync android && npx cap open android   # Android
+npx cap sync ios && npx cap open ios           # iOS（需 macOS）
+```
+
+---
+
+## 下载安装
+
+前往 [Releases](https://github.com/liweimin39/JmViewer/releases) 下载：
+
+| 产物 | 说明 |
+|---|---|
+| `.apk` | Android 直接安装（需允许安装未知来源应用） |
+| `.ipa` | iOS 未签名包，需 TrollStore 等工具自签安装 |
+| `web-dist.zip` | 静态站点，可部署到任意 Web 服务器 |
+
+版本号规则：`v1.0.2` 为正式版，含 `beta` 的标签自动标记为预发布。
 
 ---
 
 ## 项目结构
 
 ```
-
-project/
-├── android/ # Capacitor Android 原生工程
-├── ios/ # Capacitor iOS 原生工程
-├── public/ # 静态资源
-│ └── image/ # 占位图、启动屏图
-├── src/
-│ ├── api/ # API 封装
-│ │ ├── Crypto.js # AES / MD5 加解密
-│ │ ├── JmcomicApi.js # 禁漫 API（多域名重试）
-│ │ └── UserApi.js # 用户 API（收藏 / 追踪 / 信箱）
-│ ├── components/
-│ │ ├── chapter/ # 章节页组件
-│ │ │ ├── ComicHead.vue
-│ │ │ ├── ComicContent.vue
-│ │ │ ├── ComicImageLoader.js # 图片懒加载 + 解密
-│ │ │ ├── ComicReadingProgress.js
-│ │ │ ├── ImageCutter.js # Canvas 切片解密
-│ │ │ ├── ActionButtons.vue # 收藏 / 追踪
-│ │ │ ├── ChapterList.vue
-│ │ │ ├── CommentList.vue
-│ │ │ ├── EvaluationBar.vue
-│ │ │ └── RecommendedComics.vue
-│ │ ├── download/ # 下载组件
-│ │ │ ├── DownloadItem.vue
-│ │ │ └── StoragePermissionGate.vue
-│ │ ├── general/ # 通用组件
-│ │ │ ├── NavBar.vue
-│ │ │ ├── SwitchServerBtn.vue
-│ │ │ ├── Carousel.js
-│ │ │ ├── LazyLoader.js
-│ │ │ ├── Queue.js
-│ │ │ └── Setting.js
-│ │ ├── index/ # 首页组件
-│ │ ├── latest/ # 最新页组件（ComicCard）
-│ │ ├── setting/ # 设置页组件（含 AboutView / DisclaimerOverlay）
-│ │ ├── user/ # 用户页组件
-│ │ └── ...
-│ ├── composables/ # 组合式函数
-│ │ ├── useUser.js # 云端账号状态
-│ │ ├── useLocalUser.js # 本地账号状态
-│ │ ├── useDisclaimer.js # 免责声明弹窗状态
-│ │ └── useStoragePermission.js
-│ ├── router/ # 路由配置
-│ ├── styles/ # 全局样式
-│ ├── utils/
-│ │ ├── localDB.js # IndexedDB 封装（多用户 + 连接容错）
-│ │ ├── offlineDB.js # 离线漫画 SQLite（专辑 / 章节 / 图片 / 任务）
-│ │ ├── offlineStorage.js # 文件系统封装
-│ │ ├── downloadManager.js # 下载队列管理
-│ │ ├── zipHelper.js # JSZip 打包
-│ │ ├── dataExport.js # 数据导出 / 导入
-│ │ └── logger.js # 日志系统
-│ ├── views/ # 页面
-│ │ ├── HomeView.vue
-│ │ ├── LatestView.vue
-│ │ ├── SearchView.vue
-│ │ ├── CategoriesView.vue
-│ │ ├── ChapterView.vue
-│ │ ├── OfflineView.vue # 离线库
-│ │ ├── OfflineChapterView.vue # 离线阅读
-│ │ ├── SettingView.vue
-│ │ ├── UserView.vue
-│ │ ├── DownloadsView.vue
-│ │ └── DownloadDetailView.vue
-│ ├── App.vue
-│ └── main.js
-├── capacitor.config.json # Capacitor 配置
-├── vite.config.js
-├── package.json
-└── .github/workflows/ # GitHub Actions
-
+src/
+├── api/           Crypto · JmcomicApi · UserApi
+├── components/    chapter / download / general / index / latest / setting / user
+├── composables/   useUser · useLocalUser · useDisclaimer · useStoragePermission · useBackButton
+├── router/        路由配置
+├── styles/        basic · theme · index · latest · search · categories
+│                  chapter · user · setting · download · offline
+├── utils/         offlineDB · offlineStorage · downloadManager · zipHelper
+│                  localDB · dataExport · logger
+├── views/         页面（含 OfflineView / OfflineChapterView）
+├── App.vue
+└── main.js
+android/ · ios/    Capacitor 原生工程
+doc/               开发文档
 ```
 
 ---
 
-## 开发
+## 数据存储
 
-### 环境要求
+| 位置 | 内容 |
+|---|---|
+| `JmViewer/Comics/{albumId}/` | 解密后的章节图片与 `cover.jpg` |
+| `JmViewer/Tmp/logs/app.log` | 运行日志 |
+| `JmViewer/download-tasks.json` | 下载任务（SQLite 不可用时的回退） |
+| SQLite `jmviewer_offline` | 离线专辑 / 章节 / 图片清单 / 任务 |
+| IndexedDB | 本地账号、收藏、历史 |
+| localStorage | 设置、登录态、免责声明标记 |
 
-- Node.js >= 22
-- npm
-- Android Studio（Android 构建）
-- Xcode + macOS（iOS 构建）
-
-### 安装依赖
-
-```bash
-npm install
-```
-
-### 启动开发服务器
-
-```bash
-npm run dev
-```
-
-浏览器访问 `http://localhost:5173`。
-
-### 构建 Web 静态资源
-
-```bash
-npm run build
-```
-
-产物输出到 `dist/`。
+Android 保存在公共目录 `/storage/emulated/0/JmViewer/`（需「所有文件访问」权限）；iOS 保存在 App Documents，可通过系统「文件」App 访问。
 
 ---
 
-## 打包原生 App
-
-### 前置：安装 Capacitor CLI
+## 发布新版本
 
 ```bash
-npm install -g @capacitor/cli
+# 1. 同步版本号：build.gradle、project.pbxproj、package.json
+# 2. 打标签推送，触发 Release 工作流
+git tag v1.0.2
+git push origin v1.0.2
 ```
 
-### Android
-
-```bash
-# 构建 Web + 同步到原生工程
-npm run build
-npx cap sync android
-
-# 打开 Android Studio
-npx cap open android
-```
-
-在 Android Studio 中：
-
-1. **Build → Clean Project**
-2. **Run** 到真机（需开启 USB 调试）
-
-### iOS（需要 macOS）
-
-```bash
-npm run build
-npx cap sync ios
-npx cap open ios
-```
-
-在 Xcode 中：
-
-1. 设置 **Signing & Capabilities**（Team 选你的 Apple ID）
-2. **Run** 到真机
-
----
-
-## 权限说明
-
-### Android 存储权限
-
-项目使用 `MANAGE_EXTERNAL_STORAGE`（所有文件访问）权限，将下载的漫画保存到公共目录：
-
-```
-/storage/emulated/0/JmViewer/
-├── Tmp/logs/app.log         # 日志
-├── Comics/{albumId}/        # 解密后的漫画图片
-└── download-tasks.json      # 下载任务记录
-```
-
-原图暂存在 `Android/data/com.liweimin.jmviewer/cache/Tmp/ComicImages/`，App 启动时自动清空。
-
-**权限引导**：首次进入"我的下载"页会自动弹出权限请求，点击"去授权"跳转系统设置。
-
-### iOS 文件访问
-
-通过 `UIFileSharingEnabled` + `LSSupportsOpeningDocumentsInPlace` 让 App 的 Documents 目录显示在系统「文件」App 中：
-
-```
-文件 App / 我的 iPhone / JmViewer/
-├── Tmp/logs/app.log
-├── Comics/{albumId}/
-└── download-tasks.json
-```
-
-点击漫画卡片的文件夹图标通过 `shareddocuments://` 跳转到系统「文件」App。
-
----
-
-## CI / CD
-
-所有工作流位于 `.github/workflows/`：
-
-| Workflow              | 触发条件             | 产物                                  |
-| --------------------- | -------------------- | ------------------------------------- |
-| **build-web.yml**     | push to main / 手动  | `web-dist.zip`                        |
-| **build-android.yml** | push to main / 手动  | Debug 或 Release APK                  |
-| **build-ios.yml**     | push to main / 手动  | 未签名 IPA                            |
-| **release.yml**       | push tag `v*` / 手动 | GitHub Release（APK + IPA + Web zip） |
-
-### 手动触发构建
-
-进入 GitHub 仓库 → **Actions** 标签页 → 选择对应 workflow → **Run workflow**。
-
-### 发布新版本
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-会自动：
-
-1. 构建 Android Release APK（需签名）
-2. 构建 iOS 未签名 IPA
-3. 打包 Web 静态资源
-4. 创建 GitHub Release 并上传所有产物
-
-### Android 签名配置
-
-在仓库 **Settings → Secrets and variables → Actions** 中添加：
-
-| Secret 名                   | 说明                        |
-| --------------------------- | --------------------------- |
-| `ANDROID_KEYSTORE_BASE64`   | keystore 文件的 base64 编码 |
-| `ANDROID_KEYSTORE_PASSWORD` | keystore 密码               |
-| `ANDROID_KEY_ALIAS`         | key 别名                    |
-| `ANDROID_KEY_PASSWORD`      | key 密码                    |
-
-生成 keystore：
-
-```bash
-# 1. 生成 keystore
-keytool -genkey -v -keystore release.keystore -alias jmviewer -keyalg RSA -keysize 2048 -validity 10000
-# 2. 转 base64
-# Linux:
-base64 -w 0 release.keystore > release.keystore.base64
-
-# macOS:
-base64 -i release.keystore > release.keystore.base64
-# Windows CMD
-powershell -Command "[Convert]::ToBase64String([IO.File]::ReadAllBytes('release.keystore')) | Out-File -Encoding ASCII release.keystore.base64"
-```
-
-### iOS 未签名 IPA 使用
-
-下载 IPA 后通过以下工具自签安装到设备：
-
-- [TrollStore](https://github.com/opa334/TrollStore)
+工作流会自动构建 Android 签名 APK、iOS 未签名 IPA、Web 静态包并创建 GitHub Release。CI 清单、签名 Secret 配置、本地打包与调试细节见[开发文档](doc/DEVELOPMENT.md)。
 
 ---
 
 ## 已知限制
 
-- **Android 9 / iOS 15.8.7 兼容**：已通过 `core-js` + 目标降级适配，但极低版本 WebView 可能仍有兼容问题
-- **iOS 边缘滑动返回**：WKWebView 原生不支持 SPA 路由返回，需手动加返回键
-- **Web 端大文件打包**：JSZip 在内存中处理，超大漫画（> 100MB）可能内存溢出
-- **原生端不打包 ZIP**：直接保存解密后的图片到 `Comics/` 文件夹，避免内存问题
+- 极低版本 WebView（Android 9 以下）可能仍有兼容问题
+- iOS 侧滑返回在 SPA 中不生效，需使用页内返回按钮
+- Web 端打包在内存中处理，超大漫画（> 100 MB）可能 OOM
+- 原生端不生成 ZIP，直接保存解密图片
+- 离线功能仅在 Android / iOS 客户端可用
 
 ---
 
 ## 免责声明
 
-- 本项目只是一个界面，不含任何内容；所有漫画数据、图片都来自第三方接口，与项目作者无关。
-- 请遵守你所在地区的法律法规，以及内容来源方的服务条款。
-- 下载功能仅供个人备份离线阅读使用，请勿二次传播或用于任何商业用途。
-- 如有侵权，请联系删除。
+1. 本项目只是一个界面，不含任何内容；所有漫画数据、图片都来自第三方接口，与项目作者无关。
+2. 请遵守你所在地区的法律法规，以及内容来源方的服务条款。
+3. 下载功能仅供个人备份离线阅读使用，请勿二次传播或用于任何商业用途。
+4. 如有侵权，请联系删除。
 
 ---
 
 ## 致谢
 
 - 原项目：[Jmcomic-webUI](https://github.com/zrhcdy/Jmcomic-webUI)
-- [Capacitor](https://capacitorjs.com/)
-- [Vue.js](https://vuejs.org/)
-- [JSZip](https://stuk.github.io/jszip/)
-
----
+- [Capacitor](https://capacitorjs.com/) · [Vue.js](https://vuejs.org/) · [JSZip](https://stuk.github.io/jszip/)

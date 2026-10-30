@@ -827,3 +827,99 @@
 .perm-recheck:hover {
   color: var(--theme-accent-strong);
 }
+
+/* ==================== 删除方式选择弹窗 ==================== */
+
+.dl-modal-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  box-sizing: border-box;
+  background: var(--theme-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 9999;
+}
+
+.dl-modal {
+  width: 100%;
+  max-width: 380px;
+  background: var(--theme-surface);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.dl-modal-title {
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--theme-text-body);
+  word-break: break-all;
+}
+
+.dl-modal-desc {
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--theme-text-muted);
+}
+
+.dl-modal-actions {
+  display: flex;
+  flex-direction: column;
+}
+
+.dl-modal-btn {
+  width: 100%;
+  padding: 11px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dl-modal-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dl-modal-btn.record {
+  background: var(--theme-neutral-bg);
+  color: var(--theme-text-body);
+  margin-bottom: 10px;
+}
+
+.dl-modal-btn.record:hover:not(:disabled) {
+  background: #eee;
+}
+
+.dl-modal-btn.files {
+  background: var(--theme-danger);
+  color: var(--theme-text-inverse);
+}
+
+.dl-modal-btn.files:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.dl-modal-cancel {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  color: var(--theme-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.dl-modal-cancel:hover  {
+  color: var(--theme-text-body);
+}
