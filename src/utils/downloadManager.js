@@ -323,14 +323,23 @@ class DownloadManager {
     throw lastError || new Error('封面下载失败')
   }
 
-  /** 封面候选地址（第一个域名支持 CORS） */
+  /** 封面候选地址（代理开启时优先走代理，再回退直连域名） */
   _coverUrlCandidates(albumId) {
+    const urls = []
+    // ★ 代理会返回 Access-Control-Allow-Origin，封面 fetch 不会被 CORS 拦截
+    if (jmApi.proxyEnabled) {
+      urls.push(jmApi.getCoverImageURL(albumId))
+    }
+
     const hosts = jmApi.imgServers || []
     const primary = hosts[0]
     const mapped = hosts[Number(albumId) % 5]
-    return [...new Set([primary, mapped].filter(Boolean))].map(
-      (host) => `https://${host}/media/albums/${albumId}_3x4.jpg`,
+    urls.push(
+      ...[...new Set([primary, mapped].filter(Boolean))].map(
+        (host) => `https://${host}/media/albums/${albumId}_3x4.jpg`,
+      ),
     )
+    return [...new Set(urls)]
   }
 
   async _pump() {

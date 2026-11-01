@@ -42,6 +42,11 @@ const router = createRouter({
       name: 'setting-reader',
       component: () => import('@/components/setting/ReaderSettings.vue'),
     },
+    {
+      path: '/setting/ApiProxySettings',
+      name: 'setting-api-proxy',
+      component: () => import('@/components/setting/ApiProxySettings.vue'),
+    },
   ],
   scrollBehavior(to, from, savedPosition) {
     return savedPosition || { top: 0 }

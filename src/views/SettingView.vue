@@ -1,9 +1,10 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import LogsPanel from '@/components/setting/LogsPanel.vue'
 import { offlineStorage } from '@/utils/offlineStorage.js'
 import { setting } from '@/components/general/Setting.js'
+import { jmApi } from '@/api/JmcomicApi.js'
 import { useDisclaimer } from '@/composables/useDisclaimer.js'
 import '@/styles/setting.css'
 
@@ -43,6 +44,13 @@ function pickLoadMode(value) {
 // 漫画阅读设置已拆到独立页面（参考 LocalDataSettings）
 function goReader() {
   router.push({ name: 'setting-reader' })
+}
+
+// API 代理设置页
+const proxyModeText = computed(() => (jmApi.proxyEnabled ? '已启用' : '直连'))
+
+function goApiProxy() {
+  router.push({ name: 'setting-api-proxy' })
 }
 
 async function handleClearTmp() {
@@ -116,6 +124,26 @@ function goAbout() {
       <!-- ★ 漫画阅读（可点击，进入独立页面） -->
       <div class="option option-clickable" @click="goReader">
         <span class="option-label">漫画阅读</span>
+        <svg
+          class="option-arrow"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </div>
+
+      <!-- ★ API 代理（可点击，进入独立页面） -->
+      <div class="option option-clickable" @click="goApiProxy">
+        <span class="option-label">API 代理</span>
+        <span class="option-value">{{ proxyModeText }}</span>
         <svg
           class="option-arrow"
           xmlns="http://www.w3.org/2000/svg"

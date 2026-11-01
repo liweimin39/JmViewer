@@ -65,7 +65,7 @@ src/
 │   ├── download/            DownloadItem · ChapterSelector · StoragePermissionGate
 │   ├── general/             NavBar · Carousel · LazyLoader · Queue · Setting.js
 │   ├── index/ latest/       首页与卡片
-│   ├── setting/             SettingView 子组件：AboutView · LocalDataSettings · ReaderSettings · DisclaimerOverlay
+│   ├── setting/             SettingView 子组件：AboutView · LocalDataSettings · ReaderSettings · ApiProxySettings · DisclaimerOverlay
 │   └── user/                用户中心组件
 ├── composables/             useUser · useLocalUser · useDisclaimer · useStoragePermission · useBackButton
 ├── router/index.js
@@ -126,6 +126,22 @@ src/
 ### 4.3 业务成功判定
 
 `UserApi` 在解密结果为字符串时按 `code` 判定：`code >= 400` 抛业务错误（不重试），否则视为成功。这样 `{"code":200,"data":"通知已讀"}` 不会被当成失败。
+
+### 4.4 API 代理模式
+
+配合自建反向代理（`JmViewer_JMComicApi-proxy`）把「取时间戳令牌 + AES 解密」整体挪到服务端，
+规避设备时钟不准与 CDN 缓存旧响应导致的 401 / 解密失败。
+
+- 设置项：`api_proxy_enabled`（`off` / `on`）、`api_proxy_url`、`api_proxy_key`（后两项为自由文本，走 `setting.setText()`）。
+- 生效条件 `setting.api_proxy_ready`：开关为 `on` 且地址、密钥均非空。
+- 数据接口：`GET {base}{path}`（如 `/album?id=123`）+ 请求头 `X-Api-Key`，响应 `{ok, code, data, meta}`，
+  客户端直接取 `data`，不再本地生成 token、不再解密（失败抛出 `body.error`）。
+- 图片地址：改为 `{base}/media/...?s=<图片服务器索引>&key=<KEY>`，因为 `<img>` 无法携带请求头；
+  代理会补 `Access-Control-Allow-Origin`，下载封面时的 CORS 问题也一并解决。
+- 账号相关接口（登录 / 收藏 / 追踪 / 通知）仍在 `UserApi` 里直连上游，代理白名单未覆盖。
+
+设置页在 [ApiProxySettings.vue](../src/components/setting/ApiProxySettings.vue)（路由 `setting-api-proxy`），
+提供开关、地址与密钥输入、`GET /health` + `GET /servers` 两步连通性测试。
 
 ---
 
@@ -259,10 +275,14 @@ iOS（`Directory.Documents`，文件 App 可见）：同结构，无 `JmViewer/`
 | `reader_image_width` | 全屏阅读图片宽度百分比，`50` ~ `100`，默认 `100` |
 | `reader_is_horizontal` | `off` / `on`，全屏阅读是否横向整屏翻页 |
 | `auto_fullscreen_reader` | `off` / `on`，点击「开始阅读」后是否直接进入全屏阅读 |
+| `api_proxy_enabled` | `off` / `on`，是否走自建反向代理 |
+| `api_proxy_url` | 代理地址，如 `https://jmapi.yourdomain.com`（自由文本） |
+| `api_proxy_key` | 与服务端 `API_KEY` 一致的密钥（自由文本） |
 
-`init()` 读取时校验合法值，非法则回写默认值；`setOption()` 校验后写库。新增设置项需同时补齐默认值与 UI。
+`init()` 读取时校验合法值，非法则回写默认值；`setOption()` 校验后写库，`setText()` 用于代理地址 / 密钥这类自由文本。新增设置项需同时补齐默认值与 UI。
 
 阅读相关的 4 项在独立页面 [ReaderSettings.vue](../src/components/setting/ReaderSettings.vue)（路由 `setting-reader`），设置首页只保留入口。
+API 代理在独立页面 [ApiProxySettings.vue](../src/components/setting/ApiProxySettings.vue)（路由 `setting-api-proxy`）。
 
 主题变量定义在 [theme.css](../src/styles/theme.css)：`:root` 为默认粉色，其余主题以 `.{theme}-theme` 覆盖同名 CSS 变量。
 

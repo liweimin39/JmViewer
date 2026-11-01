@@ -11,6 +11,10 @@ const ROOT_MARGINS = ['0px', '50px', '100px', '200px', '500px', '1000px', '2000p
 const IMAGE_WIDTHS = ['50', '55', '60', '65', '70', '75', '80', '85', '90', '95', '100']
 const SWITCH_VALUES = ['off', 'on']
 
+// 自由文本设置项（代理地址 / 密钥），不走枚举校验
+const TEXT_KEYS = ['api_proxy_url', 'api_proxy_key']
+const MAX_TEXT_LENGTH = 512
+
 /**
  * 把主题类应用到 <html>：先摘掉所有已知主题类，再挂上新的那个。
  * 同时同步 <meta name="theme-color">，让移动端地址栏 / 状态栏颜色跟随主题。
@@ -35,8 +39,12 @@ class Setting{
         root_margin:ROOT_MARGINS,
         reader_image_width:IMAGE_WIDTHS,
         reader_is_horizontal:SWITCH_VALUES,
-        auto_fullscreen_reader:SWITCH_VALUES
+        auto_fullscreen_reader:SWITCH_VALUES,
+        api_proxy_enabled:SWITCH_VALUES
     }
+
+    // 自由文本设置的键名（代理地址 / 密钥）
+    #textKeys=TEXT_KEYS
 
     #options={
         using_imgserver_index:"0",
@@ -45,7 +53,10 @@ class Setting{
         root_margin:"200px",
         reader_image_width:"100",
         reader_is_horizontal:"off",
-        auto_fullscreen_reader:"off"
+        auto_fullscreen_reader:"off",
+        api_proxy_enabled:"off",
+        api_proxy_url:"",
+        api_proxy_key:""
     }
     constructor(){
 
@@ -60,6 +71,10 @@ class Setting{
                 localStorage.setItem(key,this.#options[key])
             }
         }
+        for(const key of this.#textKeys){
+            const value=localStorage.getItem(key)
+            if(value!==null)this.#options[key]=value.trim().slice(0,MAX_TEXT_LENGTH)
+        }
         applyTheme(this.#options.app_theme)
     }
     setOption(key,value){
@@ -68,6 +83,20 @@ class Setting{
         if(values && values.includes(value)){
             localStorage.setItem(key,value)
             this.#options[key]=value
+        }
+    }
+    /**
+     * 写入自由文本设置项（代理地址、密钥等）
+     * 空字符串表示清除该项
+     */
+    setText(key,value){
+        if(!this.#textKeys.includes(key))return
+        const text=String(value??'').trim().slice(0,MAX_TEXT_LENGTH)
+        this.#options[key]=text
+        if(text){
+            localStorage.setItem(key,text)
+        }else{
+            localStorage.removeItem(key)
         }
     }
     setTheme(theme){
@@ -96,6 +125,21 @@ class Setting{
     }
     get auto_fullscreen_reader(){
         return this.#options.auto_fullscreen_reader
+    }
+    get api_proxy_enabled(){
+        return this.#options.api_proxy_enabled
+    }
+    get api_proxy_url(){
+        return this.#options.api_proxy_url
+    }
+    get api_proxy_key(){
+        return this.#options.api_proxy_key
+    }
+    /** 代理开关打开且地址、密钥都填写时才算可用 */
+    get api_proxy_ready(){
+        return this.#options.api_proxy_enabled==='on'
+            && !!this.#options.api_proxy_url
+            && !!this.#options.api_proxy_key
     }
 }
 export const setting=new Setting()

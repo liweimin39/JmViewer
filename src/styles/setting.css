@@ -121,6 +121,12 @@
   color: var(--theme-accent-main);
   transition: transform 0.15s;
 }
+.option-value {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--theme-text-weak);
+  white-space: nowrap;
+}
 .option-clickable:hover .option-arrow {
   transform: translateX(2px);
 }
