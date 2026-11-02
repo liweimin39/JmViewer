@@ -189,6 +189,9 @@ jobs:
     needs: [android, ios, web]
     runs-on: ubuntu-latest
     steps:
+      # 需要仓库文件来读取 RELEASE_NOTES.md（此前没有 checkout，导致说明为空）
+      - uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
