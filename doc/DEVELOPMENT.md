@@ -329,12 +329,14 @@ API 代理在独立页面 [ApiProxySettings.vue](../src/components/setting/ApiPr
 ```bash
 # 同步版本号：android/app/build.gradle（versionCode + versionName）
 #              ios/App/App.xcodeproj/project.pbxproj（CURRENT_PROJECT_VERSION + MARKETING_VERSION）
-#              package.json（version）
-git tag v1.0.2          # tag 含 beta → 自动标记 prerelease
-git push origin v1.0.2
+#              package.json + package-lock.json（version）
+# 更新 RELEASE_NOTES.md：release.yml 用 body_path 读取它作为 Release 正文
+git tag v1.0.3          # tag 含 beta → 自动标记 prerelease
+git push origin v1.0.3
 ```
 
-`release.yml` 会构建 Android Release APK、iOS 未签名 IPA、Web zip，并在发布前删除同名旧 Release 再重建。
+`release.yml` 会构建 Android Release APK、iOS 未签名 IPA、Web 静态包，并在发布前删除同名旧 Release 再重建。
+Release 说明取自仓库根目录的 `RELEASE_NOTES.md`，因此每次发版前都要更新它。
 
 Android 签名 secrets：`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。
 

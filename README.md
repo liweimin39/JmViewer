@@ -142,13 +142,14 @@ Android 保存在公共目录 `/storage/emulated/0/JmViewer/`（需「所有文�
 ## 发布新版本
 
 ```bash
-# 1. 同步版本号：build.gradle、project.pbxproj、package.json
-# 2. 打标签推送，触发 Release 工作流
-git tag v1.0.2
-git push origin v1.0.2
+# 1. 同步版本号：build.gradle、project.pbxproj、package.json（及 package-lock.json）
+# 2. 更新 RELEASE_NOTES.md（会作为 GitHub Release 的说明正文）
+# 3. 打标签推送，触发 Release 工作流
+git tag v1.0.3
+git push origin v1.0.3
 ```
 
-工作流会自动构建 Android 签名 APK、iOS 未签名 IPA、Web 静态包并创建 GitHub Release。CI 清单、签名 Secret 配置、本地打包与调试细节见[开发文档](doc/DEVELOPMENT.md)。
+标签名含 `beta` 会自动发布为预发布（如 `v1.0.3-beta`）。工作流会自动构建 Android 签名 APK、iOS 未签名 IPA、Web 静态包并创建 GitHub Release。CI 清单、签名 Secret 配置、本地打包与调试细节见[开发文档](doc/DEVELOPMENT.md)。
 
 ---
 
